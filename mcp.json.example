@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "python",
+      "args": [
+        "-m",
+        "supabase_mcp_server"
+      ],
+      "_comment": "Python 3.12 is now the default, so 'python' command works. If needed, you can specify 'py -3.12' or use full path.",
+      "env": {
+        "QUERY_API_KEY": "your-api-key-from-thequery.dev",
+        "SUPABASE_PROJECT_REF": "your-project-ref",
+        "SUPABASE_DB_PASSWORD": "your-db-password",
+        "SUPABASE_REGION": "ap-southeast-1",
+        "SUPABASE_ACCESS_TOKEN": "your-access-token",
+        "SUPABASE_SERVICE_ROLE_KEY": "your-service-role-key"
+      }
+    }
+  }
+}
+
