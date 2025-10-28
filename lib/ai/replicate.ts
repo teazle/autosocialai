@@ -1,4 +1,8 @@
 import Replicate from 'replicate';
+import dotenv from 'dotenv';
+
+// Load environment variables if not already loaded
+dotenv.config();
 
 const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 
