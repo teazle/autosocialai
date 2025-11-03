@@ -2,6 +2,7 @@ import { createServiceRoleClient } from '../../lib/supabase/server';
 import { postToFacebook, postToInstagram } from '../../lib/social/meta';
 import { postToTikTok } from '../../lib/social/tiktok';
 import { decrypt } from '../../lib/crypto/encryption';
+import { validateContent } from '../../lib/ai/editor';
 import type { ContentPipeline } from '../../lib/types/database';
 
 export async function publishContent(post: ContentPipeline) {
@@ -9,6 +10,58 @@ export async function publishContent(post: ContentPipeline) {
 
   if (post.status !== 'pending' || !post.hook || !post.image_url) {
     throw new Error('Post is not ready to publish');
+  }
+
+  // Validate content before publishing (double-check)
+  // Only publish if validation_status is 'approved' or if it hasn't been validated yet
+  if (post.validation_status && post.validation_status !== 'approved') {
+    // If validation failed or needs manual review, skip auto-publishing
+    if (post.validation_status === 'rejected') {
+      throw new Error(`Post rejected by AI editor. Issues: ${post.validation_issues?.join(', ') || 'Unknown issues'}`);
+    }
+    if (post.validation_status === 'manual_review') {
+      throw new Error(`Post requires manual review. Issues: ${post.validation_issues?.join(', ') || 'Quality concerns'}`);
+    }
+  }
+
+  // Run a final validation check before publishing (in case content was modified)
+  try {
+    // Get client name for validation
+    const { data: client } = await supabase
+      .from('clients')
+      .select('name')
+      .eq('id', post.client_id)
+      .single();
+
+    if (client) {
+      const finalValidation = await validateContent({
+        hook: post.hook || '',
+        caption_ig: post.caption_ig,
+        caption_fb: post.caption_fb,
+        caption_tt: post.caption_tt,
+        image_url: post.image_url,
+        brandName: client.name,
+      });
+
+      if (!finalValidation.approved) {
+        // Update validation status and prevent publishing
+        await supabase
+          .from('content_pipeline')
+          .update({
+            validation_status: finalValidation.details.overallScore < 50 ? 'rejected' : 'manual_review',
+            validation_result: finalValidation.details,
+            validation_issues: finalValidation.issues,
+            validated_at: new Date().toISOString(),
+          })
+          .eq('id', post.id);
+
+        throw new Error(`Post failed final validation. Issues: ${finalValidation.issues.join(', ')}`);
+      }
+    }
+  } catch (validationError) {
+    // If validation fails, don't publish
+    console.error('Pre-publish validation error:', validationError);
+    throw validationError;
   }
 
   // Get client's social accounts

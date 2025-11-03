@@ -73,6 +73,7 @@ Your app needs specific permissions to post content. Your OAuth flow requests th
 - `pages_manage_posts` - Post to Facebook Pages
 - `pages_read_engagement` - Read Page engagement data
 - `business_management` - Manage business assets
+- `instagram_basic` - Access Instagram Business accounts (required for Instagram posting)
 
 ## Step 4: App Review (Important!)
 
@@ -122,20 +123,72 @@ Your app needs specific permissions to post content. Your OAuth flow requests th
 
 ## Step 6: Connect Instagram Business Account
 
-For Instagram posting to work:
+⚠️ **CRITICAL - META REQUIREMENT**: This is **NOT** optional. Instagram posting **REQUIRES** connecting Instagram to a Facebook Page. This is a Meta/Instagram API requirement that cannot be bypassed.
 
-1. **Convert to Instagram Business Account** (if not already):
-   - Open Instagram mobile app
-   - Go to Settings → Account → Switch to Business Account
-   - Or: Settings → Account → Switch Account Type → Business
+Meta's Instagram Graph API works through Facebook Pages, not direct Instagram connections. Your app must access Instagram through its connected Facebook Page.
 
-2. **Connect to Facebook Page**:
-   - Go to Instagram Settings → Business → Facebook Page
-   - Select your Facebook Page
-   - Confirm connection
+### Why This Is Required
 
-3. **Verify API Access**:
-   - Your app can now access the Instagram account via the connected Facebook Page
+**Meta's Architecture**: The Instagram Graph API requires:
+1. Instagram Business account (required by Meta)
+2. Facebook Page (required by Meta)
+3. Page → Instagram connection (required by Meta)
+
+**You cannot post to Instagram via API without this connection.** There is no workaround. This is how Meta's API works.
+
+### Why You Might See "Cannot Connect with Instagram Business"
+
+If you're getting an error when trying to connect Instagram, it's likely because:
+
+1. **Your Instagram account is not linked to your Facebook Page** ⚠️ REQUIRED BY META
+2. **Your Instagram account is not a Business account**
+3. **Your Meta app doesn't have the `instagram_basic` permission**
+
+### Step-by-Step Fix:
+
+1. **Convert to Instagram Business Account** (required):
+   - Open Instagram mobile app on your phone
+   - Go to **Settings** → **Account** → **Switch to Professional Account**
+   - Select **Business Account**
+   - Follow the prompts to complete setup
+
+2. **Connect Instagram to Facebook Page** (required):
+   - In Instagram mobile app: **Settings** → **Business** → **Facebook Page**
+   - Select your Facebook Page (the same one you'll authorize in the app)
+   - Confirm the connection
+   
+   **OR via Facebook:**
+   - Go to your Facebook Page settings
+   - Navigate to **Instagram** section
+   - Click **Connect Instagram Account**
+   - Select your Instagram Business account
+
+3. **Verify Connection**:
+   - Go to your Facebook Page on Facebook.com
+   - Check that the Instagram account is listed in the Page's Instagram section
+   - The connection must show as "Active" or "Connected"
+
+### Important Notes
+
+**For Your Clients**: Each client must:
+1. Have a Facebook Page (or create one)
+2. Have an Instagram Business/Creator account
+3. Connect their Instagram to their Facebook Page
+4. THEN authorize your app with that Facebook Page
+
+**You cannot automatically create this connection for them.** They must do it themselves through Instagram settings.
+
+### Common Issues
+
+**"Instagram Business Account not found"**
+- Make sure the Instagram account is actually a Business or Creator account
+- Verify the Instagram account is connected to your Facebook Page in Facebook Page settings
+- The account MUST be linked BEFORE authorizing the app
+
+**"No Instagram account linked to this Facebook page"**
+- Go to Page Settings → Instagram on Facebook
+- Connect your Instagram Business account
+- Re-authorize the app after connecting
 
 ## Step 7: Update Your Environment Variables
 
@@ -179,9 +232,12 @@ META_APP_SECRET=your-app-secret-here
 - User must grant `pages_manage_posts` permission
 - Page must have admin role assigned to your app
 
-**"Instagram Business Account not found"**
-- Page must be connected to an Instagram Business account
-- Instagram account must be converted to Business type
+**"Instagram Business Account not found" or "Cannot connect with Instagram Business"**
+- Your Instagram account MUST be a Business or Creator account
+- Your Instagram account MUST be connected to the Facebook Page you're authorizing
+- The connection must happen BEFORE you try to authorize the app
+- Go to your Facebook Page → Settings → Instagram to verify the connection
+- If not connected: Go to Instagram app → Settings → Business → Facebook Page and connect it
 
 **"App not in Live Mode"**
 - App must be in "Live" mode to post to production pages

@@ -11,9 +11,19 @@ export async function GET(request: NextRequest) {
 
   try {
     if (error) {
-      return NextResponse.redirect(
-        new URL(`/onboard/${state}?error=${encodeURIComponent(error)}`, request.url)
-      );
+      // Parse state to determine redirect location
+      const [clientId] = state.split('_');
+      if (state.includes('_')) {
+        // Admin flow - redirect back to client detail page
+        return NextResponse.redirect(
+          new URL(`/clients/${clientId}?error=${encodeURIComponent(error)}`, request.url)
+        );
+      } else {
+        // Onboard flow
+        return NextResponse.redirect(
+          new URL(`/onboard/${state}?error=${encodeURIComponent(error)}`, request.url)
+        );
+      }
     }
 
     if (!code || !state || state === 'unknown') {
@@ -65,6 +75,7 @@ export async function GET(request: NextRequest) {
 
     // Get IG Business Account
     let igBusinessId = null;
+    let igBusinessError = null;
     try {
       const igResponse = await axios.get(
         `https://graph.facebook.com/v20.0/${pageId}`,
@@ -77,48 +88,83 @@ export async function GET(request: NextRequest) {
       );
       if (igResponse.data.instagram_business_account) {
         igBusinessId = igResponse.data.instagram_business_account.id;
+      } else {
+        igBusinessError = 'No Instagram Business account linked to this Facebook page';
       }
-    } catch (error) {
-      console.warn('Instagram Business Account not found:', error);
+    } catch (error: any) {
+      igBusinessError = error?.response?.data?.error?.message || error.message;
+      console.warn('Instagram Business Account not found:', error?.response?.data || error);
     }
 
     // Save to database
     const supabase = createServiceRoleClient();
     const [clientId] = state.split('_');
+    
+    // Determine redirect URL based on state format
+    const isOnboardFlow = !state.includes('_') || state.split('_').length < 2;
 
-    // Save Facebook account
+    // Save Facebook account (upsert to handle duplicates)
     await supabase
       .from('social_accounts')
-      .insert({
+      .upsert({
         client_id: clientId,
         platform: 'facebook',
         page_id: pageId,
         token_encrypted: encrypt(pageAccessToken),
         token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
+      }, {
+        onConflict: 'client_id,platform'
       });
 
     if (igBusinessId) {
-      // Save Instagram account
+      // Save Instagram account (upsert to handle duplicates)
       await supabase
         .from('social_accounts')
-        .insert({
+        .upsert({
           client_id: clientId,
           platform: 'instagram',
           business_id: igBusinessId,
           page_id: pageId,
           token_encrypted: encrypt(pageAccessToken),
           token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days
+        }, {
+          onConflict: 'client_id,platform'
         });
+    } else if (igBusinessError) {
+      console.error('Instagram connection failed:', igBusinessError);
     }
 
-    return NextResponse.redirect(
-      new URL(`/onboard/${state}?success=meta`, request.url)
-    );
+    // Redirect based on flow type
+    const redirectParams = new URLSearchParams();
+    redirectParams.set('success', 'meta');
+    if (igBusinessError) {
+      redirectParams.set('ig_error', 'true');
+    }
+    
+    if (isOnboardFlow) {
+      return NextResponse.redirect(
+        new URL(`/onboard/${state}?${redirectParams.toString()}`, request.url)
+      );
+    } else {
+      // Admin flow - redirect back to client detail page
+      return NextResponse.redirect(
+        new URL(`/clients/${clientId}?${redirectParams.toString()}`, request.url)
+      );
+    }
   } catch (error) {
     console.error('Meta OAuth callback error:', error);
-    return NextResponse.redirect(
-      new URL(`/onboard/${state}?error=oauth_failed`, request.url)
-    );
+    const [clientId] = state.split('_');
+    if (state.includes('_')) {
+      // Admin flow
+      return NextResponse.redirect(
+        new URL(`/clients/${clientId}?error=oauth_failed`, request.url)
+      );
+    } else {
+      // Onboard flow
+      return NextResponse.redirect(
+        new URL(`/onboard/${state}?error=oauth_failed`, request.url)
+      );
+    }
   }
 }
 

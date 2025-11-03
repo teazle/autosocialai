@@ -1,0 +1,21 @@
+name = "autosocial-ai"
+main = ".open-next/worker.js"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# Environment variables (set secrets via: wrangler secret put VARIABLE_NAME)
+# For non-sensitive variables, you can use [vars] section
+[vars]
+NEXT_PUBLIC_APP_URL = "https://autosocial-ai.workers.dev"
+
+# Optional: Configure routes if using custom domain
+# [[routes]]
+# pattern = "yourdomain.com/*"
+# zone_name = "yourdomain.com"
+
+
+

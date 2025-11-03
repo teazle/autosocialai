@@ -25,9 +25,16 @@ export async function GET(request: NextRequest) {
 
     const clientKey = process.env.TIKTOK_CLIENT_KEY;
     const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/tiktok/callback`;
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/tiktok/callback`;
 
-    // Exchange code for access token
+    // Get code verifier from cookie
+    const codeVerifier = request.cookies.get('tiktok_code_verifier')?.value;
+
+    if (!codeVerifier) {
+      throw new Error('Code verifier not found');
+    }
+
+    // Exchange code for access token with PKCE
     const tokenResponse = await axios.post(
       'https://open.tiktokapis.com/v2/oauth/token/',
       new URLSearchParams({
@@ -36,6 +43,7 @@ export async function GET(request: NextRequest) {
         code,
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
+        code_verifier: codeVerifier,
       }),
       {
         headers: {

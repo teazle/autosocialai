@@ -2,11 +2,16 @@
 
 Complete guide for deploying AutoSocial AI to production.
 
+**📊 [See detailed comparison: DEPLOYMENT_COMPARISON.md](DEPLOYMENT_COMPARISON.md)** - Compare AWS vs Cloudflare for your specific system
+
+**For AWS deployment, see [AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md)**  
+**For Cloudflare deployment, see [CLOUDFLARE_DEPLOYMENT.md](CLOUDFLARE_DEPLOYMENT.md)**
+
 ## Prerequisites
 
 - GitHub account
-- Vercel account (for frontend)
-- VPS/Server (for worker)
+- Vercel account (for frontend) OR AWS account (see AWS_DEPLOYMENT.md)
+- VPS/Server (for worker) OR AWS EC2/Elastic Beanstalk (see AWS_DEPLOYMENT.md)
 - Domain name (optional)
 
 ## Part 1: Database Setup (Supabase)

@@ -1,3 +1,9 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from parent directory
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
+
 import { checkDuePosts } from './jobs/check-due-posts';
 import { generateContent } from './jobs/generate-content';
 import { refreshTokens } from './jobs/refresh-tokens';

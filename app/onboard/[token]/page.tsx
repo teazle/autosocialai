@@ -13,7 +13,7 @@ export default function OnboardingPage() {
 
   const [formData, setFormData] = useState({
     clientName: '',
-    brandVoice: 'Friendly' as 'Friendly' | 'Premium' | 'Bold',
+    brandVoice: 'Friendly' as 'Friendly' | 'Premium' | 'Bold' | 'Luxury',
     postsPerWeek: 1,
   });
 
@@ -91,6 +91,7 @@ export default function OnboardingPage() {
                     <option value="Friendly">Friendly</option>
                     <option value="Premium">Premium</option>
                     <option value="Bold">Bold</option>
+                    <option value="Luxury">Luxury</option>
                   </select>
                 </div>
 

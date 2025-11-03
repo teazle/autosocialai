@@ -5,9 +5,9 @@ import crypto from 'crypto';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { clientName } = body;
+    const { name, brand_voice, timezone, industry, target_audience } = body;
 
-    if (!clientName) {
+    if (!name) {
       return NextResponse.json(
         { error: 'Client name is required' },
         { status: 400 }
@@ -23,8 +23,11 @@ export async function POST(request: NextRequest) {
     const { data: client, error } = await supabase
       .from('clients')
       .insert({
-        name: clientName,
+        name,
+        brand_voice: brand_voice || 'Friendly',
+        timezone: timezone || 'Asia/Singapore',
         status: 'pending',
+        onboarding_token: onboardingToken,
       })
       .select()
       .single();
@@ -33,11 +36,12 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // Store the onboarding token (you could use a separate table for this)
-    // For simplicity, we'll return it here
-    // In production, you might want to hash it or store it separately
+    // TODO: Store brand assets if industry/audience provided
+    if (industry || target_audience) {
+      // Save to brand_assets table
+    }
 
-    const onboardingLink = `${process.env.NEXT_PUBLIC_APP_URL}/onboard/${onboardingToken}`;
+    const onboardingLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/onboard/${onboardingToken}`;
 
     return NextResponse.json({
       clientId: client.id,

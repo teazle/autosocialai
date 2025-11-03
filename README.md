@@ -1,187 +1,260 @@
-# AutoSocial AI - Automatic Content & Posting System
+# AutoSocial AI - Automated Social Media Management
 
-Automated social media content creation and posting system for Facebook, Instagram, and TikTok.
+Automated content creation and multi-platform posting system for Facebook, Instagram, and TikTok.
 
-## Features
+## 🎯 Overview
 
-- 🤖 **AI-Powered Content Generation**
-  - Hooks and captions generated via Groq (Llama 3.1 8B)
-  - Premium visuals via fal.ai Flux Pro 1.1
-  - Automatic brand voice customization
+AutoSocial AI is a complete social media automation platform that:
+- Generates AI-powered content (hooks, captions, images)
+- Schedules and posts automatically to Facebook, Instagram, and TikTok
+- Manages multiple clients with brand customization
+- Provides admin dashboard for content management
 
-- 📅 **Automated Scheduling**
-  - Configurable posting frequency
-  - Timezone-aware scheduling
-  - Automatic content pipeline management
+## ✨ Features
 
-- 🌐 **Multi-Platform Support**
-  - Facebook page posting
-  - Instagram Business posting
-  - TikTok video publishing
+### For Administrators
+- **Dashboard** - Overview of all clients and upcoming posts
+- **Client Management** - Create, configure, and manage clients
+- **Content Pipeline** - Edit, approve, and publish posts
+- **Kill Switch** - Emergency stop for all auto-posting
+- **Brand Configuration** - Set voice, colors, banned terms, CTAs
+- **Schedule Management** - Configure posting frequency and times
+- **Activity Logs** - Track posting history and errors
 
-- 🔒 **Enterprise-Grade Security**
-  - AES-256 encrypted tokens
-  - Automatic token refresh
-  - Secure OAuth flows
+### For Clients
+- **Self-Service Onboarding** - Secure invitation links
+- **OAuth Connection** - Connect Facebook, Instagram, TikTok accounts
+- **Brand Customization** - Set brand voice and guidelines
+- **Content Preview** - See generated content before posting
 
-## Tech Stack
+### For System
+- **AI Content Generation** - Groq (Llama 3.1 8B) for captions
+- **Image Generation** - Replicate (FLUX Schnell) for visuals
+- **Automatic Scheduling** - Timezone-aware posting
+- **Multi-Platform Posting** - FB/IG/TikTok in one system
+- **Token Management** - Automatic refresh and encryption
 
-- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: Supabase (PostgreSQL)
-- **Worker**: Node.js + PM2
-- **AI**: Groq (Llama 3.1 8B Instant), fal.ai (Flux Pro 1.1)
-- **Social APIs**: Meta Graph API, TikTok Content Posting API
+## 🏗️ Architecture
 
-## Quick Start
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Admin Dashboard                           │
+│  (Next.js 14 - Client Management & Content Pipeline)       │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+        ▼            ▼            ▼
+┌─────────────┐  ┌──────────┐  ┌──────────────┐
+│   Supabase  │  │   AI     │  │   OAuth     │
+│   Database  │  │ Services │  │   Flows     │
+└──────┬──────┘  └────┬─────┘  └────┬─────────┘
+       │              │              │
+       └──────────────┼──────────────┘
+                     │
+                     ▼
+            ┌─────────────────┐
+            │  Worker Service │
+            │  (Background    │
+            │   Processing)   │
+            └─────────────────┘
+                     │
+         ┌───────────┼───────────┐
+         ▼           ▼           ▼
+    Facebook      Instagram      TikTok
+```
+
+## 🚀 Quick Start
 
 ### Prerequisites
-
 - Node.js 18+
 - Supabase account
 - Groq API key
-- fal.ai API key
-- Meta App credentials
-- TikTok Developer credentials
+- Replicate API token
+- Meta Developer account
+- TikTok Developer account
 
-### 1. Clone and Install
+### Installation
 
 ```bash
+# Clone repository
 git clone <repository-url>
 cd AutoSocialAi
+
+# Install dependencies
 npm install
-```
 
-### 2. Environment Setup
-
-Copy `.env.example` to `.env` and fill in your credentials:
-
-```bash
-cp .env.example .env
-```
-
-Required environment variables:
-- `SUPABASE_URL` - Your Supabase project URL
-- `SUPABASE_ANON_KEY` - Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
-- `GROQ_API_KEY` - Groq API key
-- `FAL_API_KEY` - fal.ai API key
-- `META_APP_ID` - Meta App ID
-- `META_APP_SECRET` - Meta App Secret
-- `TIKTOK_CLIENT_KEY` - TikTok client key
-- `TIKTOK_CLIENT_SECRET` - TikTok client secret
-- `ENCRYPTION_KEY` - 32-character encryption key
-- `NEXT_PUBLIC_APP_URL` - Your application URL
-
-### 3. Database Setup
-
-Run the migration to create tables:
-
-```bash
-# If using Supabase CLI
-supabase db push
-
-# Or manually run the SQL in supabase/migrations/001_initial_schema.sql
-```
-
-### 4. Run Development Server
-
-```bash
-npm run dev
-```
-
-Visit `http://localhost:3000`
-
-### 5. Setup Worker
-
-In a separate terminal:
-
-```bash
+# Install worker dependencies
 cd worker
 npm install
+cd ..
+```
+
+### Configuration
+
+1. Copy `.env.example` to `.env`
+2. Fill in all environment variables (see [docs/SETUP.md](docs/SETUP.md))
+3. Set up Supabase database (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))
+
+### Run Development
+
+```bash
+# Terminal 1 - Frontend
+npm run dev
+
+# Terminal 2 - Worker
+cd worker
 npm run dev
 ```
 
-## Deployment
+Visit `http://localhost:3000/admin`
 
-### Next.js (Vercel)
+## 📚 Documentation
 
-1. Push to GitHub
-2. Import project in Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy
+- **[EC2_DEPLOYMENT_QUICKSTART.md](docs/EC2_DEPLOYMENT_QUICKSTART.md)** - Single EC2 deployment guide ⭐
+- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment guide (Vercel)
+- **[ARCHITECTURE_EXPLAINED.md](docs/ARCHITECTURE_EXPLAINED.md)** - Why frontend and worker are split ⭐
+- **[DEPLOYMENT_COMPARISON.md](docs/DEPLOYMENT_COMPARISON.md)** - AWS vs Cloudflare comparison
+- **[AWS_DEPLOYMENT.md](docs/AWS_DEPLOYMENT.md)** - AWS deployment guide
+- **[CLOUDFLARE_DEPLOYMENT.md](docs/CLOUDFLARE_DEPLOYMENT.md)** - Cloudflare deployment guide
+- **[AWS_MCP_SETUP.md](docs/AWS_MCP_SETUP.md)** - AWS MCP Server setup guide ⭐
+- **[ADMIN.md](docs/ADMIN.md)** - Admin dashboard usage guide
+- **[API.md](docs/API.md)** - API endpoint documentation
+- **[SETUP.md](docs/SETUP.md)** - Platform setup (OAuth, APIs)
+- **[META_SETUP.md](docs/META_SETUP.md)** - Facebook/Instagram setup
+- **[TIKTOK_SETUP.md](docs/TIKTOK_SETUP.md)** - TikTok setup
 
-### Worker (VPS with PM2)
+## 🏛️ Tech Stack
 
-```bash
-# On your VPS
-git clone <repository-url>
-cd AutoSocialAi/worker
-npm install
+### Frontend
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Components**: shadcn/ui + Custom
+- **Forms**: react-hook-form + zod
+- **Icons**: Lucide React
 
-# Install PM2 globally
-npm install -g pm2
+### Backend
+- **API**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **Worker**: Node.js + PM2
+- **Encryption**: AES-256 (crypto-js)
 
-# Start with PM2
-pm2 start ../ecosystem.config.js
+### AI Services
+- **Content**: Groq (Llama 3.1 8B Instant)
+- **Images**: Replicate (FLUX Schnell)
 
-# Save PM2 configuration
-pm2 save
+### Social Platforms
+- Facebook Graph API
+- Instagram Graph API
+- TikTok Content Posting API
 
-# Enable PM2 startup
-pm2 startup
-```
-
-## Project Structure
+## 📂 Project Structure
 
 ```
 AutoSocialAi/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes
-│   ├── admin/             # Admin dashboard
-│   └── onboard/           # Client onboarding
-├── worker/                # Background worker service
-│   ├── jobs/              # Scheduled jobs
-│   └── utils/             # Helper functions
-├── lib/                    # Shared libraries
+├── app/
+│   ├── admin/              # Admin dashboard
+│   ├── clients/            # Client detail pages
+│   ├── api/                # API routes
+│   │   ├── admin/         # Admin endpoints
+│   │   ├── auth/          # OAuth flows
+│   │   └── clients/       # Client CRUD
+│   └── onboard/            # Client onboarding
+├── components/
+│   ├── ui/                # shadcn/ui components
+│   └── ...                # Custom components
+├── lib/
 │   ├── ai/                # AI integrations
 │   ├── social/            # Social media APIs
 │   ├── supabase/          # Database clients
-│   └── crypto/            # Encryption utilities
-├── supabase/              # Database migrations
-└── components/            # React components
+│   ├── crypto/            # Encryption
+│   └── utils/             # Utilities
+├── worker/
+│   ├── jobs/              # Scheduled jobs
+│   └── utils/             # Helper functions
+└── supabase/
+    └── migrations/        # Database migrations
 ```
 
-## Architecture
+## 🎯 Usage
 
-### Components
+### Creating a Client
+1. Go to Admin Dashboard
+2. Click "Create Client"
+3. Fill in brand voice, timezone, industry
+4. Copy onboarding link
+5. Send to client
 
-1. **Next.js Frontend** - Admin dashboard and client onboarding
-2. **API Routes** - OAuth callbacks, content generation, admin actions
-3. **Worker Service** - Scheduled tasks for content generation and posting
-4. **Supabase Database** - Storage for clients, accounts, content pipeline
+### Configuring Brand
+1. Open client detail page
+2. Go to "Brand & Rules" tab
+3. Set brand voice, colors, banned terms
+4. Add CTAs and hashtags
+5. Save changes
 
-### Workflow
+### Setting Schedule
+1. Go to "Schedule" tab
+2. Set posts per week
+3. Select posting days
+4. Set posting time
+5. Save schedule
 
-1. **Onboarding**: Client connects social accounts via OAuth
-2. **Scheduling**: System generates content based on posting rules
-3. **Generation**: AI creates hooks, captions, and images
-4. **Publishing**: Worker automatically posts content at scheduled times
+### Publishing Content
+1. Go to "Pipeline" tab
+2. Click "Edit" on a post
+3. Review and modify content
+4. Click "Save as Draft" or "Approve"
+5. Click "Publish Now" for immediate posting
 
-## API Endpoints
+### Kill Switch
+- Click "Kill Switch" on admin dashboard
+- Red = ON (stopping all auto-posting)
+- Green = OFF (auto-posting active)
+- Takes effect immediately
 
-- `POST /api/admin/clients/invite` - Generate client onboarding link
-- `GET /api/auth/meta` - Initiate Meta OAuth
-- `GET /api/auth/meta/callback` - Meta OAuth callback
-- `GET /api/auth/tiktok` - Initiate TikTok OAuth
-- `GET /api/auth/tiktok/callback` - TikTok OAuth callback
+## 🔧 Development
 
-## Worker Jobs
+### Adding New Components
+- Use shadcn/ui for UI components
+- Place in `components/ui/`
+- Follow existing patterns
 
-- **Check Due Posts** (every 30s) - Publishes scheduled content
-- **Generate Content** (every 10m) - Creates new content for clients
-- **Refresh Tokens** (every 6h) - Maintains OAuth tokens
+### Adding API Routes
+- Place in `app/api/`
+- Use Next.js 14 App Router
+- Handle errors properly
+- Return JSON responses
 
-## License
+### Adding Worker Jobs
+- Place in `worker/jobs/`
+- Use PM2 ecosystem config
+- Log properly for monitoring
+
+## 📊 Database Schema
+
+- `clients` - Client information
+- `social_accounts` - OAuth tokens (encrypted)
+- `brand_assets` - Brand configuration
+- `content_rules` - Posting schedule
+- `content_pipeline` - Generated posts
+- `post_logs` - Publishing history
+
+## 🔒 Security
+
+- AES-256 token encryption
+- Automatic token refresh
+- Secure OAuth flows
+- Environment variable protection
+- Service role key for database admin operations
+
+## 📝 License
 
 Proprietary - All rights reserved
+
+## 🤝 Support
+
+For issues or questions:
+- Check logs first
+- Review documentation
+- Open an issue

@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'fbcdn.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'replicate.delivery',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
     ],
   },
 };

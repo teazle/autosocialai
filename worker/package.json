@@ -12,9 +12,7 @@
     "axios": "^1.12.2",
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
     "tsx": "^4.19.1"
-  },
-  "devDependencies": {
-    "dotenv": "^17.2.3"
   }
 }
