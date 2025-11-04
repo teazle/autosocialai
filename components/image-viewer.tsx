@@ -246,7 +246,7 @@ export function ImageViewer({
             <div className="absolute inset-0 flex items-center justify-center z-40">
               <div className="text-gray-900 text-center">
                 <p className="text-lg mb-2">Failed to load image</p>
-                <p className="text-sm text-gray-600">The image may have been moved or deleted</p>
+                <p className="text-sm text-black">The image may have been moved or deleted</p>
               </div>
             </div>
           )}

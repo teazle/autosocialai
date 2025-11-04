@@ -24,6 +24,7 @@ export default function SettingsTab({ client }: SettingsTabProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [onboardingLink, setOnboardingLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     fetchOnboardingLink();
@@ -42,6 +43,41 @@ export default function SettingsTab({ client }: SettingsTabProps) {
     } catch (error) {
       console.error('Error fetching onboarding link:', error);
       setOnboardingLink('');
+    }
+  };
+
+  const generateOnboardingLink = async () => {
+    setGenerating(true);
+    try {
+      const response = await fetch(`/api/admin/clients/${client.id}/onboarding`, {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setOnboardingLink(data.onboardingLink);
+        toast({ 
+          title: 'Onboarding link generated', 
+          description: 'The onboarding link has been created successfully.', 
+          variant: 'success' 
+        });
+      } else {
+        const error = await response.json();
+        toast({ 
+          title: 'Failed to generate link', 
+          description: error.error || 'Could not generate onboarding link.', 
+          variant: 'destructive' 
+        });
+      }
+    } catch (error) {
+      console.error('Error generating onboarding link:', error);
+      toast({ 
+        title: 'Failed to generate link', 
+        description: 'An error occurred while generating the onboarding link.', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -88,7 +124,7 @@ export default function SettingsTab({ client }: SettingsTabProps) {
       <Card className="border-blue-200 bg-blue-50">
         <CardHeader>
           <CardTitle>Client Onboarding Link</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-black">
             {onboardingLink 
               ? 'Send this link to the client to complete their setup'
               : 'No onboarding link available. Create a new client to get an invite link.'
@@ -101,7 +137,7 @@ export default function SettingsTab({ client }: SettingsTabProps) {
               <Input
                 value={onboardingLink}
                 readOnly
-                className="font-mono text-sm"
+                className="font-mono text-sm text-black"
               />
               <Button
                 variant={copied ? 'default' : 'outline'}
@@ -121,7 +157,16 @@ export default function SettingsTab({ client }: SettingsTabProps) {
               </Button>
             </div>
           ) : (
-            <p className="text-sm text-gray-500">This client was created before the onboarding system was implemented.</p>
+            <div className="space-y-4">
+              <p className="text-sm text-black">This client doesn't have an onboarding link yet. Generate one to share with the client.</p>
+              <Button
+                onClick={generateOnboardingLink}
+                disabled={generating}
+                className="w-full"
+              >
+                {generating ? 'Generating...' : 'Generate Onboarding Link'}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -130,7 +175,7 @@ export default function SettingsTab({ client }: SettingsTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Client Profile</CardTitle>
-          <CardDescription>Update client information and settings</CardDescription>
+          <CardDescription className="text-black">Update client information and settings</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -166,13 +211,13 @@ export default function SettingsTab({ client }: SettingsTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Auto-posting</CardTitle>
-          <CardDescription>Control automatic posting for this client</CardDescription>
+          <CardDescription className="text-black">Control automatic posting for this client</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Pause Auto-posting</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-black">
                 Stop automatic posting for this client
               </p>
             </div>
@@ -190,10 +235,10 @@ export default function SettingsTab({ client }: SettingsTabProps) {
       <Card>
         <CardHeader>
           <CardTitle>Model Preferences</CardTitle>
-          <CardDescription>Configure AI model settings (coming soon)</CardDescription>
+          <CardDescription className="text-black">Configure AI model settings (coming soon)</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-black">
             Configure which AI models to use for content generation
           </div>
         </CardContent>
@@ -210,7 +255,7 @@ export default function SettingsTab({ client }: SettingsTabProps) {
       <Card className="border-red-200">
         <CardHeader>
           <CardTitle className="text-red-700">Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions</CardDescription>
+          <CardDescription className="text-black">Irreversible actions</CardDescription>
         </CardHeader>
         <CardContent>
           <div>

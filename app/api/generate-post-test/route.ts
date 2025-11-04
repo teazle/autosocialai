@@ -84,9 +84,30 @@ export async function POST(request: NextRequest) {
         customPromptTemplate: brandAssets?.image_prompt_template,
         customNegativePromptTemplate: brandAssets?.negative_prompt_template,
       });
-      imageUrl = imageResult.imageUrl;
+      // Ensure imageUrl is a valid string URL
+      const rawImageUrl = imageResult.imageUrl;
+      if (typeof rawImageUrl !== 'string') {
+        console.error('❌ imageResult.imageUrl is not a string:', typeof rawImageUrl, rawImageUrl);
+        throw new Error(`Invalid image URL type: expected string, got ${typeof rawImageUrl}`);
+      }
+      
+      // Validate it's a proper URL
+      try {
+        new URL(rawImageUrl);
+      } catch (e) {
+        console.error('❌ imageResult.imageUrl is not a valid URL:', rawImageUrl.substring(0, 100));
+        throw new Error(`Invalid image URL format: ${rawImageUrl.substring(0, 100)}`);
+      }
+      
+      // Check for function code patterns
+      if (rawImageUrl.includes('function') || rawImageUrl.includes('url() {') || rawImageUrl.includes('=>')) {
+        console.error('❌ imageResult.imageUrl contains function code:', rawImageUrl.substring(0, 100));
+        throw new Error(`Invalid image URL: contains function code`);
+      }
+      
+      imageUrl = rawImageUrl;
       imageModel = imageResult.model;
-      console.log(`✅ Image generated with ${imageResult.model}: ${imageResult.imageUrl}`);
+      console.log(`✅ Image generated with ${imageResult.model}: ${imageUrl.substring(0, 100)}...`);
     
     // Upload to Supabase Storage
     finalImageUrl = imageUrl;
@@ -183,8 +204,33 @@ export async function POST(request: NextRequest) {
       client.timezone || 'Asia/Singapore'
     );
 
+    // Validate imageUrl before saving
+    let imageUrlToSave: string | null = null;
+    if (imageUrl) {
+      if (typeof imageUrl !== 'string') {
+        console.error('❌ imageUrl is not a string before saving:', typeof imageUrl, imageUrl);
+        imageUrlToSave = null;
+      } else {
+        // Double-check it's a valid URL
+        try {
+          new URL(imageUrl);
+          // Check for function code
+          if (!imageUrl.includes('function') && !imageUrl.includes('url() {') && !imageUrl.includes('=>')) {
+            imageUrlToSave = imageUrl;
+          } else {
+            console.error('❌ imageUrl contains function code before saving:', imageUrl.substring(0, 100));
+            imageUrlToSave = null;
+          }
+        } catch (e) {
+          console.error('❌ imageUrl is not a valid URL before saving:', imageUrl.substring(0, 100));
+          imageUrlToSave = null;
+        }
+      }
+    }
+    
     // Save to database (with temporary post ID for storage)
     console.log('💾 Step 4: Saving to database...');
+    console.log(`📸 Saving image_url: ${imageUrlToSave ? imageUrlToSave.substring(0, 100) + '...' : 'null'}`);
     const { data: post, error: insertError } = await supabase
       .from('content_pipeline')
       .insert({
@@ -195,7 +241,7 @@ export async function POST(request: NextRequest) {
         caption_ig: content.caption_ig,
         caption_fb: content.caption_fb,
         caption_tt: content.caption_tt,
-        image_url: typeof finalImageUrl === 'string' ? finalImageUrl : (finalImageUrl ? String(finalImageUrl) : null), // Ensure it's always a string URL
+        image_url: imageUrlToSave, // Only save if it's a valid string URL
         image_model: imageModel || null, // Store the model used to generate the image
         validation_status: validationStatus,
         validation_result: validationResult.details,
@@ -209,14 +255,18 @@ export async function POST(request: NextRequest) {
       throw insertError;
     }
 
-    // If we used a temp ID, re-upload with actual post ID
-    // Use a mutable variable to track the final post state (post is const)
+    // Always try to upload to Supabase Storage with actual post ID
+    // This ensures we have a permanent URL even if temp upload failed
     let finalPost = post;
-    if (finalImageUrl && typeof finalImageUrl === 'string' && finalImageUrl.includes('supabase') && imageUrl) {
+    // Only proceed if we have a valid imageUrl (not saved as null due to validation failure)
+    if (imageUrlToSave && imageUrl && typeof imageUrl === 'string' && imageUrl.length > 0) {
       try {
+        console.log(`💾 Re-uploading image to Supabase Storage with post ID: ${post.id}...`);
         const { uploadImageToStorage } = await import('@/lib/storage/image-storage');
         const correctSupabaseUrl = await uploadImageToStorage(imageUrl, post.id);
+        
         if (correctSupabaseUrl) {
+          // Update post with Supabase URL (permanent)
           const { data: updatedPost, error: updateError } = await supabase
             .from('content_pipeline')
             .update({ image_url: correctSupabaseUrl })
@@ -225,17 +275,51 @@ export async function POST(request: NextRequest) {
             .single();
           
           if (updateError) {
-            console.error('❌ Failed to update post with correct Supabase URL:', updateError);
+            console.error('❌ Failed to update post with Supabase URL:', updateError);
+            // Keep the original URL (Replicate or temp Supabase)
           } else {
-            console.log(`✅ Post updated with correct Supabase URL: ${correctSupabaseUrl}`);
-            finalPost = updatedPost; // Update the final post reference
+            console.log(`✅ Post updated with Supabase URL: ${correctSupabaseUrl}`);
+            finalPost = updatedPost;
+            finalImageUrl = correctSupabaseUrl;
           }
-          finalImageUrl = correctSupabaseUrl;
+        } else {
+          console.warn(`⚠️  Supabase upload failed, keeping Replicate URL: ${imageUrl.substring(0, 100)}...`);
+          // If Supabase upload failed but we have a Replicate URL, use that
+          if (!finalImageUrl && imageUrl) {
+            finalImageUrl = imageUrl;
+            // Update post with Replicate URL as fallback
+            await supabase
+              .from('content_pipeline')
+              .update({ image_url: imageUrl })
+              .eq('id', post.id);
+          }
         }
-      } catch (error) {
-        console.error('❌ Error re-uploading with correct post ID:', error);
-        // Ignore, already have a working URL
+      } catch (error: any) {
+        console.error('❌ Error uploading to Supabase Storage:', error?.message);
+        // If we have a Replicate URL, use it as fallback
+        if (!finalImageUrl && imageUrl && typeof imageUrl === 'string') {
+          // Validate URL before saving as fallback
+          try {
+            new URL(imageUrl);
+            if (!imageUrl.includes('function') && !imageUrl.includes('url() {')) {
+              finalImageUrl = imageUrl;
+              // Update the post with Replicate URL
+              await supabase
+                .from('content_pipeline')
+                .update({ image_url: imageUrl })
+                .eq('id', post.id);
+              console.log(`✅ Saved Replicate URL as fallback: ${imageUrl.substring(0, 100)}...`);
+            } else {
+              console.error('❌ Replicate URL contains function code, cannot save');
+            }
+          } catch (e) {
+            console.error('❌ Replicate URL is invalid, cannot save:', imageUrl.substring(0, 100));
+          }
+        }
       }
+    } else if (!imageUrlToSave && imageUrl) {
+      // If imageUrlToSave was null due to validation failure, log it
+      console.warn(`⚠️  Image URL was not saved due to validation failure. Original value type: ${typeof imageUrl}`);
     }
     
     // Final verification - fetch the post again to ensure image_url is saved
@@ -248,12 +332,35 @@ export async function POST(request: NextRequest) {
     if (verifyError) {
       console.error('❌ Failed to verify post image_url:', verifyError);
     } else {
-      console.log(`✅ Verified image_url in database: ${verifyPost.image_url || 'none'}`);
+      const dbImageUrl = verifyPost.image_url;
+      console.log(`✅ Verified image_url in database: ${dbImageUrl ? 'EXISTS' : 'NULL'}`);
+      if (dbImageUrl) {
+        console.log(`   Type: ${typeof dbImageUrl}`);
+        console.log(`   Value (first 100 chars): ${typeof dbImageUrl === 'string' ? dbImageUrl.substring(0, 100) : String(dbImageUrl).substring(0, 100)}`);
+        
+        // Validate the stored URL
+        if (typeof dbImageUrl !== 'string') {
+          console.error('❌ ERROR: Database image_url is not a string! Type:', typeof dbImageUrl);
+        } else if (dbImageUrl.includes('function') || dbImageUrl.includes('url() {')) {
+          console.error('❌ ERROR: Database image_url contains function code!');
+        } else {
+          try {
+            new URL(dbImageUrl);
+            console.log('✅ Database image_url is a valid URL');
+          } catch (e) {
+            console.error('❌ ERROR: Database image_url is not a valid URL format');
+          }
+        }
+      }
+      
+      // Update finalPost with verified URL
+      finalPost = { ...finalPost, image_url: dbImageUrl || finalPost.image_url };
+      finalImageUrl = finalImageUrl || (typeof dbImageUrl === 'string' ? dbImageUrl : null);
     }
 
     console.log('✅ Post saved successfully!');
-    console.log(`📸 Image URL saved to database: ${finalImageUrl || 'none'}`);
-    console.log(`📸 Post image_url from database: ${finalPost.image_url || 'none'}`);
+    console.log(`📸 Final image_url: ${finalImageUrl || 'none'}`);
+    console.log(`📸 Post image_url from finalPost: ${finalPost.image_url || 'none'}`);
 
     const response: any = {
       success: true, 

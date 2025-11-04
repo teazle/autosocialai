@@ -139,7 +139,7 @@ export default function BrandTab({ clientId }: BrandTabProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading brand settings...</div>;
+    return <div className="text-center py-8 text-black">Loading brand settings...</div>;
   }
 
   return (
@@ -296,7 +296,7 @@ export default function BrandTab({ clientId }: BrandTabProps) {
         <CardContent className="space-y-3">
           <div>
             <Label htmlFor="imagePrompt">Custom Image Prompt Template</Label>
-            <p className="text-sm text-gray-500 mb-2">
+            <p className="text-sm text-black mb-2">
               Customize how AI generates images. Use placeholders: {'{hook}'}, {'{brandName}'}, {'{colors}'}
             </p>
             <textarea
@@ -306,13 +306,13 @@ export default function BrandTab({ clientId }: BrandTabProps) {
               onChange={(e) => setImagePromptTemplate(e.target.value)}
               placeholder={`Premium social media ad visual for {brandName}. Palette: {colors}. Idea from hook: "{hook}". Style: high-contrast, editorial, ad-quality, professional photography.`}
             />
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-black mt-2">
               Leave empty to use default prompt. Current default: &quot;Premium social media ad visual for {'{brandName}'}. Palette: {'{colors}'}. Idea from hook: &quot;{'{hook}'}&quot;. Style: high-contrast, editorial, ad-quality, professional photography.&quot;
             </p>
           </div>
           <div>
             <Label htmlFor="negativePrompt">Custom Negative Prompt (Optional)</Label>
-            <p className="text-sm text-gray-500 mb-2">
+            <p className="text-sm text-black mb-2">
               Add additional terms the AI should avoid (comma-separated). This is <strong>combined</strong> with the system default negative prompt that already prevents common issues like gibberish, random characters, low quality, etc.
             </p>
             <textarea
@@ -322,7 +322,7 @@ export default function BrandTab({ clientId }: BrandTabProps) {
               onChange={(e) => setNegativePromptTemplate(e.target.value)}
               placeholder="e.g., cartoon style, retro look, dark themes, people faces"
             />
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-black mt-2">
               <strong>How it works:</strong> Your custom terms will be added to the default system negative prompt. 
               The default already includes: watermark, text, typography, gibberish, random characters, foreign text, 
               low quality, blurry, distortion, bad anatomy, cluttered, messy, etc. 
@@ -341,7 +341,7 @@ export default function BrandTab({ clientId }: BrandTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Auto-publish</p>
-              <p className="text-sm text-gray-500">Automatically publish posts when they're ready</p>
+              <p className="text-sm text-black">Automatically publish posts when they're ready</p>
             </div>
             <Button
               variant={autoPublish ? 'default' : 'outline'}

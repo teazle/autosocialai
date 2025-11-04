@@ -53,15 +53,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Darken gray text for better contrast on white backgrounds */
+/* Text opacity control */
 * {
   --tw-text-opacity: 1;
-}
-
-body .text-gray-500 {
-  color: #4b5563 !important;
-}
-
-body .text-gray-600 {
-  color: #374151 !important;
 }

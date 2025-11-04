@@ -146,7 +146,7 @@ export default function ScheduleTab({ clientId }: ScheduleTabProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading schedule...</div>;
+    return <div className="text-center py-8 text-black">Loading schedule...</div>;
   }
 
   return (
@@ -224,7 +224,7 @@ export default function ScheduleTab({ clientId }: ScheduleTabProps) {
           <CardTitle>Upcoming Posts</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-black">
             <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>No upcoming posts scheduled</p>
           </div>

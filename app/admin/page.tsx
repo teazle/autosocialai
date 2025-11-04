@@ -175,17 +175,17 @@ export default function AdminDashboard() {
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-500">Active Clients</h3>
+            <h3 className="text-xs sm:text-sm font-medium text-black">Active Clients</h3>
             <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-2">{stats.activeClients}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-500">Posts This Week</h3>
+            <h3 className="text-xs sm:text-sm font-medium text-black">Posts This Week</h3>
             <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-2">{stats.postsThisWeek}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-500">Success Rate</h3>
+            <h3 className="text-xs sm:text-sm font-medium text-black">Success Rate</h3>
             <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-2">{stats.successRate}%</p>
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-lg shadow mb-6">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Upcoming Posts</h2>
-              <p className="text-sm text-gray-500 mt-1">Next 10 posts across all clients</p>
+              <p className="text-sm text-black mt-1">Next 10 posts across all clients</p>
             </div>
             <div className="divide-y divide-gray-200">
               {upcomingPosts.map((post) => {
@@ -206,12 +206,12 @@ export default function AdminDashboard() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-gray-900">{client?.name}</span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-black">
                             {new Date(post.scheduled_at).toLocaleString()}
                           </span>
                         </div>
                         {post.hook && (
-                          <p className="text-sm text-gray-600 mt-1">{post.hook}</p>
+                          <p className="text-sm text-black mt-1">{post.hook}</p>
                         )}
                       </div>
                       <button className="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
@@ -232,9 +232,9 @@ export default function AdminDashboard() {
           </div>
           <div className="divide-y divide-gray-200">
             {loading ? (
-              <div className="p-6 text-center text-gray-500">Loading clients...</div>
+              <div className="p-6 text-center text-black">Loading clients...</div>
             ) : clients.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-black">
                 No clients yet. Create your first client to get started.
               </div>
             ) : (
@@ -306,7 +306,7 @@ function ClientCard({ client }: { client: Client }) {
             <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(client.status)}`}>
               {client.status}
             </span>
-            <span className="text-xs sm:text-sm text-gray-500">
+            <span className="text-xs sm:text-sm text-black">
               {new Date(client.created_at).toLocaleDateString()}
             </span>
           </div>
@@ -322,9 +322,9 @@ function ClientCard({ client }: { client: Client }) {
       {expanded && (
         <div className="mt-4 space-y-4">
           {loadingContent ? (
-            <div className="text-center text-gray-500 py-4">Loading content...</div>
+            <div className="text-center text-black py-4">Loading content...</div>
           ) : content.length === 0 ? (
-            <div className="text-center text-gray-500 py-4">No content yet</div>
+            <div className="text-center text-black py-4">No content yet</div>
           ) : (
             content.map((item) => (
               <ContentItem key={item.id} content={item} />
@@ -355,7 +355,7 @@ function ContentItem({ content }: { content: ContentPipeline }) {
         <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(content.status)}`}>
           {content.status}
         </span>
-        <span className="text-xs sm:text-sm text-gray-500">
+        <span className="text-xs sm:text-sm text-black">
           {new Date(content.scheduled_at).toLocaleString()}
         </span>
       </div>
@@ -363,7 +363,7 @@ function ContentItem({ content }: { content: ContentPipeline }) {
       {content.hook && (
         <div>
           <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-1">Hook</h4>
-          <p className="text-xs sm:text-sm text-gray-600">{content.hook}</p>
+          <p className="text-xs sm:text-sm text-black">{content.hook}</p>
         </div>
       )}
 

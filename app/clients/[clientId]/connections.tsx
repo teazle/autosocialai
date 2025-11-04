@@ -83,7 +83,7 @@ export default function ConnectionsTab({ clientId }: ConnectionsTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>{label}</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">{description}</p>
+              <p className="text-sm text-black mt-1">{description}</p>
             </div>
           </div>
         </CardHeader>
@@ -110,15 +110,15 @@ export default function ConnectionsTab({ clientId }: ConnectionsTabProps) {
               
               {account.business_id && (
                 <div>
-                  <p className="text-xs text-gray-500">Business ID</p>
-                  <p className="text-sm font-mono">{account.business_id}</p>
+                  <p className="text-xs text-black">Business ID</p>
+                  <p className="text-sm font-mono text-black">{account.business_id}</p>
                 </div>
               )}
               
               {account.page_id && (
                 <div>
-                  <p className="text-xs text-gray-500">Page ID</p>
-                  <p className="text-sm font-mono">{account.page_id}</p>
+                  <p className="text-xs text-black">Page ID</p>
+                  <p className="text-sm font-mono text-black">{account.page_id}</p>
                 </div>
               )}
 
@@ -132,7 +132,7 @@ export default function ConnectionsTab({ clientId }: ConnectionsTabProps) {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-sm text-gray-500 mb-4">Not connected</p>
+              <p className="text-sm text-black mb-4">Not connected</p>
               <Button onClick={() => handleConnect(platform)}>
                 Connect with {label}
               </Button>
@@ -144,7 +144,7 @@ export default function ConnectionsTab({ clientId }: ConnectionsTabProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading connections...</div>;
+    return <div className="text-center py-8 text-black">Loading connections...</div>;
   }
 
   return (

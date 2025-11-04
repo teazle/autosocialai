@@ -111,12 +111,12 @@ export default function AdminSettingsPage() {
               ← Back to Admin Dashboard
             </button>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">AI Prompt Settings</h1>
-            <p className="text-sm text-gray-600 mt-1">Customize how AI generates content and images</p>
+            <p className="text-sm text-black mt-1">Customize how AI generates content and images</p>
           </div>
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading settings...</div>
+          <div className="text-center py-12 text-black">Loading settings...</div>
         ) : (
           <div className="space-y-6">
             {/* Warning */}
@@ -168,13 +168,13 @@ export default function AdminSettingsPage() {
                               </SelectItem>
                             </SelectContent>
                           </Select>
-                          <div className="mt-2 space-y-1 text-xs text-gray-600">
+                          <div className="mt-2 space-y-1 text-xs text-black">
                             <p><strong>Ideogram v3 Turbo:</strong> Best for quotes, announcements, human faces. ~$0.004-0.01/image</p>
                             <p><strong>FLUX 1.1 Pro:</strong> Highest quality overall. ~$0.04/image</p>
                             <p><strong>FLUX Schnell:</strong> Fastest, cheapest. Best for visuals without text. ~$0.003/image</p>
                           </div>
                           {setting.updated_at && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-black">
                               Last updated: {new Date(setting.updated_at).toLocaleString()}
                             </p>
                           )}

@@ -281,7 +281,7 @@ export function Composer({ open, onOpenChange, post, clientId }: ComposerProps) 
                 </div>
               )}
               <div className="p-4 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-sm text-black">
                   <CurrentIcon className="w-4 h-4" />
                   <span className={CurrentConfig.color}>{CurrentConfig.name}</span>
                 </div>
@@ -313,7 +313,7 @@ export function Composer({ open, onOpenChange, post, clientId }: ComposerProps) 
                 placeholder="Attention-grabbing hook"
                 maxLength={80}
               />
-              <p className="text-xs text-gray-500 mt-1">{hook.split(' ').length}/12 words</p>
+              <p className="text-xs text-black mt-1">{hook.split(' ').length}/12 words</p>
             </div>
 
             {/* Captions */}
@@ -332,7 +332,7 @@ export function Composer({ open, onOpenChange, post, clientId }: ComposerProps) 
                   onChange={(e) => setCaptionIg(e.target.value)}
                   placeholder="Write your Instagram caption..."
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-black mt-1">
                   {captionIg.split(/\s+/).filter(w => w).length} words
                 </p>
               </TabsContent>
@@ -345,7 +345,7 @@ export function Composer({ open, onOpenChange, post, clientId }: ComposerProps) 
                   onChange={(e) => setCaptionFb(e.target.value)}
                   placeholder="Write your Facebook caption..."
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-black mt-1">
                   {captionFb.split(/\s+/).filter(w => w).length} words
                 </p>
               </TabsContent>
@@ -358,7 +358,7 @@ export function Composer({ open, onOpenChange, post, clientId }: ComposerProps) 
                   onChange={(e) => setCaptionTt(e.target.value)}
                   placeholder="Write your TikTok caption..."
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-black mt-1">
                   {captionTt.split(/\s+/).filter(w => w).length} words
                 </p>
               </TabsContent>
@@ -387,7 +387,7 @@ export function Composer({ open, onOpenChange, post, clientId }: ComposerProps) 
               {!imageUrl && (
                 <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                   <ImageIcon className="w-12 h-12 mx-auto text-gray-400" />
-                  <p className="text-sm text-gray-500 mt-2">No image uploaded</p>
+                  <p className="text-sm text-black mt-2">No image uploaded</p>
                 </div>
               )}
             </div>
@@ -429,7 +429,7 @@ export function Composer({ open, onOpenChange, post, clientId }: ComposerProps) 
               <Label htmlFor="editorComments" className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 Editor Comments
-                <span className="text-xs text-gray-500 font-normal">(for regeneration)</span>
+                <span className="text-xs text-black font-normal">(for regeneration)</span>
               </Label>
               <Textarea
                 id="editorComments"

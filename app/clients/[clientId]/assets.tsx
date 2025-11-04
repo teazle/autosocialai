@@ -106,7 +106,7 @@ export default function AssetsTab({ clientId }: AssetsTabProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading assets...</div>;
+    return <div className="text-center py-8 text-black">Loading assets...</div>;
   }
 
   return (
@@ -132,7 +132,7 @@ export default function AssetsTab({ clientId }: AssetsTabProps) {
         </CardHeader>
         <CardContent>
           {assets.length === 0 && postsWithoutImages.length === 0 ? (
-            <div className="text-center py-12 text-gray-700">
+            <div className="text-center py-12 text-black">
               No assets yet. Assets will appear here once content is generated.
             </div>
           ) : (
@@ -179,7 +179,7 @@ export default function AssetsTab({ clientId }: AssetsTabProps) {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-black">
                   No images available yet. Generate images using the button above.
                 </div>
               )}

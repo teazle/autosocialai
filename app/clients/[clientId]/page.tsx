@@ -90,7 +90,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
         <div className="max-w-7xl mx-auto">
           <Card>
             <CardContent className="pt-6">
-              <p className="text-center text-gray-500">Client not found</p>
+              <p className="text-center text-black">Client not found</p>
               <Link href="/admin">
                 <Button variant="outline" className="mt-4">
                   Back to Dashboard
@@ -125,7 +125,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
                 }`}>
                   {client.status}
                 </span>
-                <span className="text-xs sm:text-sm text-gray-500">
+                <span className="text-xs sm:text-sm text-black">
                   {client.timezone}
                 </span>
               </div>

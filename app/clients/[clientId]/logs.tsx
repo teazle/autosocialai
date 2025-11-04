@@ -78,7 +78,7 @@ export default function LogsTab({ clientId }: LogsTabProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading logs...</div>;
+    return <div className="text-center py-8 text-black">Loading logs...</div>;
   }
 
   return (
@@ -102,7 +102,7 @@ export default function LogsTab({ clientId }: LogsTabProps) {
       {filteredLogs.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-black">
               No activity yet
             </div>
           </CardContent>
@@ -119,12 +119,12 @@ export default function LogsTab({ clientId }: LogsTabProps) {
                         {log.status}
                       </Badge>
                       <span className="text-sm font-medium">{log.action}</span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-black">
                         {formatRelativeTime(log.created_at)}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-700">{log.message}</p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-sm text-black">{log.message}</p>
+                    <p className="text-xs text-black mt-1">
                       {formatDateTime(log.created_at)}
                     </p>
                   </div>

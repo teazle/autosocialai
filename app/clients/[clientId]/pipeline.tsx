@@ -59,17 +59,37 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
         const fetchedPosts = data.content || [];
         console.log(`📥 Fetched ${fetchedPosts.length} posts`);
         
-        // Filter out posts with invalid image URLs (function strings)
+        // Filter out posts with invalid image URLs (function strings or non-string values)
         const validPosts = fetchedPosts.map((p: any) => {
           const imageUrl = p.image_url;
-          // Check if image_url is invalid (contains function code)
-          if (imageUrl && typeof imageUrl === 'string' && 
-              (imageUrl.includes('url() {') || 
-               imageUrl.includes('function') ||
-               imageUrl.includes('return new URL'))) {
-            console.warn(`⚠️  Post ${p.id} has invalid image URL, clearing it`);
+          
+          // Log the actual value for debugging
+          if (imageUrl && typeof imageUrl !== 'string') {
+            console.warn(`⚠️  Post ${p.id} has non-string image_url:`, typeof imageUrl, imageUrl);
             return { ...p, image_url: null };
           }
+          
+          // Check if image_url is invalid (contains function code or is not a valid URL)
+          if (imageUrl && typeof imageUrl === 'string') {
+            // Check for function code patterns
+            if (imageUrl.includes('url() {') || 
+                imageUrl.includes('function') ||
+                imageUrl.includes('return new URL') ||
+                imageUrl.includes('=>') ||
+                imageUrl.trim().length === 0) {
+              console.warn(`⚠️  Post ${p.id} has invalid image URL (function code):`, imageUrl.substring(0, 100));
+              return { ...p, image_url: null };
+            }
+            
+            // Check if it's a valid URL format
+            try {
+              new URL(imageUrl);
+            } catch (e) {
+              console.warn(`⚠️  Post ${p.id} has invalid image URL (not a valid URL):`, imageUrl.substring(0, 100));
+              return { ...p, image_url: null };
+            }
+          }
+          
           return p;
         });
         
@@ -79,6 +99,15 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
         postsWithImages.forEach((p: any) => {
           console.log(`  - Post ${p.id}: ${p.image_url?.substring(0, 80)}...`);
         });
+        
+        // Log posts without images for debugging
+        const postsWithoutImages = validPosts.filter((p: any) => !p.image_url);
+        if (postsWithoutImages.length > 0) {
+          console.log(`⚠️  Posts without images: ${postsWithoutImages.length}`);
+          postsWithoutImages.forEach((p: any) => {
+            console.log(`  - Post ${p.id} (${p.status}): No image_url`);
+          });
+        }
         
         setPosts(validPosts);
       }
@@ -157,7 +186,7 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
     : posts.filter(p => p.status === selectedStatus);
 
   if (loading) {
-    return <div className="text-center py-8">Loading pipeline...</div>;
+    return <div className="text-center py-8 text-black">Loading pipeline...</div>;
   }
 
   return (
@@ -201,7 +230,7 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
       {filteredPosts.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-black">
               No posts found
             </div>
           </CardContent>
@@ -222,11 +251,20 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                         onError={(e) => {
                           console.error('❌ Failed to load image:', post.image_url);
                           console.error('Post ID:', post.id);
-                          // Hide broken image
-                          (e.target as HTMLImageElement).style.display = 'none';
+                          console.error('Image URL type:', typeof post.image_url);
+                          console.error('Image URL length:', post.image_url?.length);
+                          // Hide broken image but show placeholder
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          // Show error message
+                          const errorDiv = document.createElement('div');
+                          errorDiv.className = 'w-24 h-24 bg-red-50 rounded flex items-center justify-center border-2 border-red-300';
+                          errorDiv.innerHTML = '<span class="text-xs text-red-600 text-center px-1">Image Error</span>';
+                          target.parentElement?.appendChild(errorDiv);
                         }}
                         onLoad={() => {
                           console.log('✅ Image loaded successfully:', post.image_url);
+                          console.log('Post ID:', post.id);
                         }}
                         onClick={() => {
                           // Find all posts with images and get current index
@@ -255,7 +293,7 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                         <Badge variant={getStatusColor(post.status)}>
                           {post.status}
                         </Badge>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-black">
                           {formatDateTime(post.scheduled_at)}
                         </span>
                       </div>
@@ -413,7 +451,7 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                       <p className="text-sm font-medium break-words">{post.hook}</p>
                     )}
                     
-                    <div className="text-sm text-gray-600 space-y-1 break-words">
+                    <div className="text-sm text-black space-y-1 break-words">
                       {post.caption_ig && (
                         <div>
                           <span className="font-medium">IG: </span>
