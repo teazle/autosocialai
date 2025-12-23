@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { BrandAssets, ContentRules } from '@/lib/types/database';
 import { createBrowserClient } from '@/lib/supabase/client';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Upload, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { DragDropUpload } from '@/components/ui/drag-drop-upload';
 
 interface BrandTabProps {
   clientId: string;
@@ -29,6 +30,16 @@ export default function BrandTab({ clientId }: BrandTabProps) {
   const [autoPublish, setAutoPublish] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  // Brand Analysis State
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [brandPdfUrl, setBrandPdfUrl] = useState<string | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -41,7 +52,7 @@ export default function BrandTab({ clientId }: BrandTabProps) {
       if (response.ok) {
         const data = await response.json();
         const client = data.client;
-        
+
         if (client) {
           setBrandVoice(client.brand_voice || 'Friendly');
         }
@@ -63,6 +74,13 @@ export default function BrandTab({ clientId }: BrandTabProps) {
         setNegativePromptTemplate(assets.negative_prompt_template || '');
         setIndustry(assets.industry || '');
         setTargetAudience(assets.target_audience || '');
+        setLogoUrl(assets.logo_url || null);
+        // Brand Analysis Fields
+        setWebsiteUrl(assets.website_url || '');
+        setInstagramUrl(assets.instagram_url || '');
+        setYoutubeUrl(assets.youtube_url || '');
+        setBrandPdfUrl(assets.brand_pdf_url || null);
+        setAiAnalysis(assets.ai_analysis || null);
       }
     } catch (error) {
       console.error('Error fetching brand data:', error);
@@ -75,7 +93,7 @@ export default function BrandTab({ clientId }: BrandTabProps) {
     setSaving(true);
     try {
       const supabase = createBrowserClient();
-      
+
       // Update brand assets (create if doesn't exist)
       const { error: assetsError } = await supabase
         .from('brand_assets')
@@ -87,6 +105,10 @@ export default function BrandTab({ clientId }: BrandTabProps) {
           negative_prompt_template: negativePromptTemplate || null,
           industry: industry || null,
           target_audience: targetAudience || null,
+          // Brand Analysis URLs
+          website_url: websiteUrl || null,
+          instagram_url: instagramUrl || null,
+          youtube_url: youtubeUrl || null,
         }, {
           onConflict: 'client_id'
         });
@@ -110,6 +132,93 @@ export default function BrandTab({ clientId }: BrandTabProps) {
       toast({ title: 'Failed to save', description: 'Could not update brand settings. Please try again.', variant: 'destructive' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const supabase = createBrowserClient();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${clientId}-logo-${Date.now()}.${fileExt}`;
+      const filePath = `brand-logos/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('brand-assets')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('brand-assets')
+        .getPublicUrl(filePath);
+
+      // Update brand_assets with logo_url
+      const { error: updateError } = await supabase
+        .from('brand_assets')
+        .upsert({
+          client_id: clientId,
+          logo_url: publicUrl,
+        }, {
+          onConflict: 'client_id'
+        });
+
+      if (updateError) throw updateError;
+
+      setLogoUrl(publicUrl);
+      toast({ title: 'Logo uploaded', description: 'Your brand logo has been saved.', variant: 'success' });
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      toast({ title: 'Upload failed', description: error?.message || 'Could not upload logo. Please try again.', variant: 'destructive' });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handlePdfUpload = async (file: File) => {
+    if (!file) return;
+
+    setUploadingPdf(true);
+    try {
+      const supabase = createBrowserClient();
+      const fileName = `${clientId}-brand-deck-${Date.now()}.pdf`;
+      const filePath = `brand-documents/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('brand-assets')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('brand-assets')
+        .getPublicUrl(filePath);
+
+      // Update brand_assets with pdf_url
+      const { error: updateError } = await supabase
+        .from('brand_assets')
+        .upsert({
+          client_id: clientId,
+          brand_pdf_url: publicUrl,
+        }, {
+          onConflict: 'client_id'
+        });
+
+      if (updateError) throw updateError;
+
+      setBrandPdfUrl(publicUrl);
+      toast({ title: 'PDF uploaded', description: 'Your brand deck has been saved.', variant: 'success' });
+    } catch (error: any) {
+      console.error('Error uploading PDF:', error);
+      toast({ title: 'Upload failed', description: error?.message || 'Could not upload PDF. Please try again.', variant: 'destructive' });
+    } finally {
+      setUploadingPdf(false);
     }
   };
 
@@ -162,6 +271,155 @@ export default function BrandTab({ clientId }: BrandTabProps) {
               </Button>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Brand Logo */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Brand Logo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start gap-6">
+            {/* Logo Preview */}
+            <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden bg-gray-50 flex-shrink-0">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Brand Logo" className="w-full h-full object-contain" />
+              ) : (
+                <ImageIcon className="w-8 h-8 text-gray-400" />
+              )}
+            </div>
+
+            {/* Drag & Drop Upload */}
+            <div className="flex-1">
+              <DragDropUpload
+                onFileSelect={handleLogoUpload}
+                accept="image/*"
+                maxSizeMB={5}
+                uploading={uploadingLogo}
+                currentFileUrl={logoUrl}
+                label=""
+                description="Recommended: PNG or SVG, max 5MB. The logo will be used for branding reference."
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Brand Research - Website, Social Media, PDF */}
+      <Card className="border-blue-200 bg-blue-50/30">
+        <CardHeader>
+          <CardTitle>Brand Research Sources</CardTitle>
+          <p className="text-sm text-black">
+            Provide links to your website, social media, or upload brand documents. AI will analyze these to learn your brand style.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Website URL */}
+          <div>
+            <Label htmlFor="websiteUrl">Website URL</Label>
+            <Input
+              id="websiteUrl"
+              type="url"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              placeholder="https://example.com"
+            />
+          </div>
+
+          {/* Social Media URLs */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="instagramUrl">Instagram Profile</Label>
+              <Input
+                id="instagramUrl"
+                type="url"
+                value={instagramUrl}
+                onChange={(e) => setInstagramUrl(e.target.value)}
+                placeholder="https://instagram.com/yourprofile"
+              />
+            </div>
+            <div>
+              <Label htmlFor="youtubeUrl">YouTube Channel</Label>
+              <Input
+                id="youtubeUrl"
+                type="url"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                placeholder="https://youtube.com/@yourchannel"
+              />
+            </div>
+          </div>
+
+          {/* PDF Upload */}
+          <div>
+            <DragDropUpload
+              onFileSelect={handlePdfUpload}
+              accept="application/pdf"
+              maxSizeMB={10}
+              uploading={uploadingPdf}
+              currentFileUrl={brandPdfUrl}
+              label="Brand Deck / Guidelines (PDF)"
+              description="Upload your company deck, brand guidelines, or pitch deck. Max 10MB."
+            />
+          </div>
+
+          {/* AI Analysis Result (if available) */}
+          {aiAnalysis && (
+            <div className="mt-4 p-4 bg-white border rounded-lg">
+              <h4 className="font-semibold text-sm mb-2">AI Brand Analysis</h4>
+              {aiAnalysis.brand_summary && (
+                <p className="text-sm text-black">{aiAnalysis.brand_summary}</p>
+              )}
+              {aiAnalysis.suggested_voice && (
+                <p className="text-sm mt-2"><strong>Suggested Voice:</strong> {aiAnalysis.suggested_voice}</p>
+              )}
+              {aiAnalysis.writing_style && (
+                <p className="text-sm mt-1"><strong>Writing Style:</strong> {aiAnalysis.writing_style}</p>
+              )}
+            </div>
+          )}
+
+          {/* Analyze Button */}
+          <Button
+            className="w-full"
+            disabled={analyzing || (!websiteUrl && !instagramUrl && !youtubeUrl && !brandPdfUrl)}
+            onClick={async () => {
+              setAnalyzing(true);
+              try {
+                // First save the URLs
+                await handleSave();
+
+                // Then trigger analysis
+                const response = await fetch(`/api/clients/${clientId}/analyze-brand`, {
+                  method: 'POST',
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                  throw new Error(data.error || 'Analysis failed');
+                }
+
+                setAiAnalysis(data.analysis);
+                toast({
+                  title: 'Analysis Complete',
+                  description: 'Brand profile has been generated and saved.',
+                  variant: 'success'
+                });
+              } catch (error: any) {
+                console.error('Analysis error:', error);
+                toast({
+                  title: 'Analysis Failed',
+                  description: error.message || 'Could not analyze brand. Please try again.',
+                  variant: 'destructive'
+                });
+              } finally {
+                setAnalyzing(false);
+              }
+            }}
+          >
+            {analyzing ? 'Analyzing...' : '✨ Analyze Brand with AI'}
+          </Button>
         </CardContent>
       </Card>
 
@@ -323,9 +581,9 @@ export default function BrandTab({ clientId }: BrandTabProps) {
               placeholder="e.g., cartoon style, retro look, dark themes, people faces"
             />
             <p className="text-xs text-black mt-2">
-              <strong>How it works:</strong> Your custom terms will be added to the default system negative prompt. 
-              The default already includes: watermark, text, typography, gibberish, random characters, foreign text, 
-              low quality, blurry, distortion, bad anatomy, cluttered, messy, etc. 
+              <strong>How it works:</strong> Your custom terms will be added to the default system negative prompt.
+              The default already includes: watermark, text, typography, gibberish, random characters, foreign text,
+              low quality, blurry, distortion, bad anatomy, cluttered, messy, etc.
               Use this field to add <strong>client-specific</strong> exclusions (e.g., &quot;no cartoon style&quot; for a premium brand).
             </p>
           </div>
