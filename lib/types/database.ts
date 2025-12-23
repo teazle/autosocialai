@@ -39,7 +39,19 @@ export interface BrandAssets {
   negative_prompt_template?: string;
   industry?: string;
   target_audience?: string;
-  replicate_model?: string; // Replicate model preference: ideogram-ai/ideogram-v3-turbo, black-forest-labs/flux-1.1-pro, black-forest-labs/flux-schnell
+  replicate_model?: string; // Replicate model preference
+  // Brand Analysis Fields
+  website_url?: string;
+  instagram_url?: string;
+  youtube_url?: string;
+  brand_pdf_url?: string;
+  ai_analysis?: {
+    suggested_colors?: string[];
+    suggested_voice?: string;
+    brand_summary?: string;
+    extracted_guidelines?: string[];
+    writing_style?: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -66,6 +78,7 @@ export interface ContentPipeline {
   caption_tt?: string;
   image_url?: string;
   image_model?: string; // Replicate model used to generate the image
+  video_url?: string; // Video URL for TikTok (generated from image)
   post_refs: Record<string, string>; // { fb: "123", ig: "456", tt: "789" }
   error_log?: string;
   retry_count: number;

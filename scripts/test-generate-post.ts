@@ -93,7 +93,7 @@ async function testGeneratePost(clientId?: string) {
     console.log('   (Using structured prompts, style keywords, industry/audience context)');
     
     const imageStartTime = Date.now();
-    const imageUrl = await generateImage({
+    const imageResult = await generateImage({
       hook: content.hook,
       brandName: client.name,
       brandColors: brandAssets?.color_hex,
@@ -106,7 +106,8 @@ async function testGeneratePost(clientId?: string) {
     const imageTime = Date.now() - imageStartTime;
 
     console.log(`✅ Image generated in ${imageTime}ms`);
-    console.log(`   Image URL: ${imageUrl}`);
+    console.log(`   Image URL: ${imageResult.imageUrl}`);
+    console.log(`   Model: ${imageResult.model}`);
 
     // Step 5: Validate content
     console.log('\n✅ Step 5: Validating content quality...');
@@ -117,7 +118,7 @@ async function testGeneratePost(clientId?: string) {
       caption_ig: content.caption_ig,
       caption_fb: content.caption_fb,
       caption_tt: content.caption_tt,
-      image_url: imageUrl,
+      image_url: imageResult.imageUrl,
       brandName: client.name,
     });
     const validationTime = Date.now() - validationStartTime;
@@ -162,12 +163,13 @@ async function testGeneratePost(clientId?: string) {
     console.log(`   - Check the generated content quality above`);
     console.log(`   - The improved prompts now use system messages and structured formatting`);
     console.log(`   - Industry and audience context are now being utilized`);
-    console.log(`   - Review the image at: ${imageUrl}`);
+    console.log(`   - Review the image at: ${imageResult.imageUrl}`);
 
     return {
       success: true,
       content,
-      imageUrl,
+      imageUrl: imageResult.imageUrl,
+      imageModel: imageResult.model,
       validationResult,
       timings: {
         content: contentTime,

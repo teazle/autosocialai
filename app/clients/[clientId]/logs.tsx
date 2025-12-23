@@ -43,10 +43,10 @@ export default function LogsTab({ clientId }: LogsTabProps) {
 
       if (logs) {
         // Map logs to LogEntry format
-        const logEntries = logs.map((log: any) => ({
+        const logEntries: LogEntry[] = logs.map((log: any) => ({
           id: log.id,
           action: `Published to ${log.platform}`,
-          status: 'success',
+          status: 'success' as const,
           message: `Post published to ${log.platform} with ID: ${log.post_id}`,
           created_at: log.created_at,
         }));

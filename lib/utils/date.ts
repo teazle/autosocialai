@@ -37,31 +37,32 @@ export function getUpcomingDates(baseDate: Date, count: number, daysOfWeek: numb
   return dates;
 }
 
-export function getNextPostingDate(daysOfWeek: number[], postingTime: string, timezone?: string): Date {
+export function getNextPostingDate(daysOfWeek: number[], postingTime: string, timezone?: string, afterDate?: Date): Date {
   if (!daysOfWeek || daysOfWeek.length === 0) {
     daysOfWeek = [1, 3, 5]; // Default to Mon, Wed, Fri
   }
 
   // Get current time in the client's timezone or UTC
   let now: Date;
+  const baseDate = afterDate ? new Date(afterDate) : new Date();
+
   if (timezone) {
-    // Convert current UTC time to client timezone for accurate day calculation
-    const utcNow = new Date();
+    // Convert base UTC time to client timezone for accurate day calculation
     const tzOffset = getTimezoneOffset(timezone);
-    now = new Date(utcNow.getTime() + (tzOffset * 60 * 1000));
+    now = new Date(baseDate.getTime() + (tzOffset * 60 * 1000));
   } else {
-    now = new Date();
+    now = baseDate;
   }
 
   const [hours, minutes] = postingTime.split(':').map(Number);
-  
+
   // Find the next available day (checking in local timezone context)
   for (let i = 0; i < 14; i++) {
     const checkDate = new Date(now);
     checkDate.setDate(now.getDate() + i);
     checkDate.setHours(hours, minutes || 0, 0, 0);
     checkDate.setSeconds(0, 0); // Reset seconds and milliseconds
-    
+
     // Check if this day matches and is in the future
     if (daysOfWeek.includes(checkDate.getDay()) && checkDate > now) {
       // Convert back to UTC for storage (if timezone was specified)
@@ -72,13 +73,13 @@ export function getNextPostingDate(daysOfWeek: number[], postingTime: string, ti
       return checkDate;
     }
   }
-  
+
   // Fallback: return next day at posting time
   const nextDate = new Date(now);
   nextDate.setDate(now.getDate() + 1);
   nextDate.setHours(hours, minutes || 0, 0, 0);
   nextDate.setSeconds(0, 0);
-  
+
   if (timezone) {
     const tzOffset = getTimezoneOffset(timezone);
     return new Date(nextDate.getTime() - (tzOffset * 60 * 1000));
@@ -101,6 +102,6 @@ function getTimezoneOffset(timezone: string): number {
     'Europe/London': 0, // GMT (varies with DST)
     'Australia/Sydney': 10 * 60, // UTC+10 (varies with DST)
   };
-  
+
   return offsets[timezone] || 0; // Default to UTC if unknown
 }

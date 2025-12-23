@@ -6,7 +6,7 @@ import { getReplicateModel } from './get-replicate-model';
 // Load environment variables if not already loaded
 dotenv.config();
 
-const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+
 
 /**
  * Replicate Model Options for Image Generation
@@ -17,17 +17,17 @@ const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
  * 3. black-forest-labs/flux-schnell - Best value (fast, cheap, good for visuals without text)
  * 4. black-forest-labs/flux-dev - Not recommended (no advantage over flux-schnell)
  */
-export type ReplicateModel = 
-  | 'ideogram-ai/ideogram-v3-turbo'  // Best for text rendering + humans
-  | 'black-forest-labs/flux-1.1-pro' // Best quality, slower
-  | 'black-forest-labs/flux-schnell'; // Best value, fast
+export type ReplicateModel =
+  | 'ideogram-ai/ideogram-v3-turbo'  // Good for text
+  | 'black-forest-labs/flux-1.1-pro' // BEST for text & quality
+  | 'black-forest-labs/flux-schnell' // Fast, cheap
+  | 'recraft-ai/recraft-v3';         // Excellent for design & text
 
 /**
  * Default model selection based on use case:
- * - ideogram-v3-turbo: Best for social media with text (quotes, announcements, human faces)
- * - flux-schnell: Best for cost-effective visuals without text
+ * - flux-1.1-pro: Current SOTA for text rendering and overall quality
  */
-const DEFAULT_MODEL: ReplicateModel = process.env.REPLICATE_MODEL as ReplicateModel || 'ideogram-ai/ideogram-v3-turbo';
+const DEFAULT_MODEL: ReplicateModel = process.env.REPLICATE_MODEL as ReplicateModel || 'black-forest-labs/flux-1.1-pro';
 
 /**
  * System-wide default negative prompt to prevent common image generation issues
@@ -79,6 +79,7 @@ export async function generateImage(
 ): Promise<ImageGenerationResult> {
   // Note: This function is now async, but getReplicateModel is called inside
   // to get the global setting if no model override is provided
+  const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
   if (!REPLICATE_API_TOKEN) {
     throw new Error('REPLICATE_API_TOKEN is not configured');
   }
@@ -98,7 +99,7 @@ export async function generateImage(
   // Helper function to generate style keywords based on industry and audience (defined before use)
   function getStyleKeywordsForImage(industry?: string, targetAudience?: string): string {
     let styles: string[] = ['premium', 'ad-quality', 'professional'];
-    
+
     // Add industry-specific styles
     if (industry) {
       const industryLower = industry.toLowerCase();
@@ -112,7 +113,7 @@ export async function generateImage(
         styles.push('energetic', 'dynamic', 'motivational');
       }
     }
-    
+
     // Add audience-specific styles
     if (targetAudience) {
       const audienceLower = targetAudience.toLowerCase();
@@ -122,7 +123,7 @@ export async function generateImage(
         styles.push('sophisticated', 'corporate', 'polished');
       }
     }
-    
+
     return styles.join(', ');
   }
 
@@ -137,7 +138,7 @@ export async function generateImage(
       .replace('{colors}', input.brandColors?.join(', ') || 'modern, vibrant')
       .replace('{industry}', input.industry || '')
       .replace('{targetAudience}', input.targetAudience || '');
-    
+
     // Append quality enhancements if not already present (avoid duplication)
     const promptLower = prompt.toLowerCase();
     // Always add quality enhancements (removed text-free check since we now allow text)
@@ -151,10 +152,10 @@ export async function generateImage(
     if (input.targetAudience) {
       contextInfo += ` Target audience: ${input.targetAudience}.`;
     }
-    
+
     // Get style keywords based on brand voice (implied from brand context)
     const styleKeywords = getStyleKeywordsForImage(input.industry, input.targetAudience);
-    
+
     // Structured prompt following best practices: Subject | Context | Style | Technical | Colors | Composition
     prompt = `${input.hook} | Brand: ${input.brandName}${contextInfo}
 Setting: Modern, professional social media advertising environment, optimized for digital display
@@ -167,10 +168,10 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
   // Apply image feedback to improve the prompt
   if (input.imageFeedback && input.imageFeedback.length > 0) {
     const imageImprovements: string[] = [];
-    
+
     input.imageFeedback.forEach((feedback) => {
       const feedbackLower = feedback.toLowerCase();
-      
+
       // Extract actionable improvements from feedback
       if (feedbackLower.includes('low quality') || feedbackLower.includes('professional')) {
         imageImprovements.push('ultra high quality', 'professional photography', 'crisp and sharp');
@@ -187,7 +188,7 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
         imageImprovements.push('well-composed', 'balanced composition');
       }
     });
-    
+
     if (imageImprovements.length > 0) {
       prompt += ` ${imageImprovements.join(', ')}.`;
     }
@@ -197,19 +198,19 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
   // Get from database, fallback to hardcoded default
   const dbNegativePrompt = await getImageNegativePrompt();
   let negativePrompt = dbNegativePrompt || DEFAULT_NEGATIVE_PROMPT;
-  
+
   // Add custom negative prompt template if provided (combines with default)
   if (input.customNegativePromptTemplate && input.customNegativePromptTemplate.trim().length > 0) {
     negativePrompt += `, ${input.customNegativePromptTemplate.trim()}`;
   }
-  
+
   // Add feedback-based exclusions (additional safeguards if issues were detected)
   if (input.imageFeedback && input.imageFeedback.length > 0) {
     const additionalExclusions: string[] = [];
-    
+
     input.imageFeedback.forEach((feedback) => {
       const feedbackLower = feedback.toLowerCase();
-      
+
       // Add extra emphasis if we've seen these issues before
       // Exclude gibberish and unreadable text, but allow readable text
       if (feedbackLower.includes('gibberish') || feedbackLower.includes('random characters')) {
@@ -225,7 +226,7 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
         additionalExclusions.push('low quality', 'pixelated', 'grainy');
       }
     });
-    
+
     // Add additional exclusions if any were found (avoid duplicates)
     if (additionalExclusions.length > 0) {
       const existingLower = negativePrompt.toLowerCase();
@@ -236,7 +237,7 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
       });
     }
   }
-  
+
   // Add client-specific banned terms
   if (input.bannedTerms && input.bannedTerms.length > 0) {
     const existingLower = negativePrompt.toLowerCase();
@@ -256,14 +257,14 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
     // Get from global system settings (async, but we need to await)
     selectedModel = await getReplicateModel();
   }
-  
+
   // Text handling: By default, allow readable text but exclude gibberish
   // Only exclude text if explicitly requested (includeText: false)
   const shouldExcludeText = input.includeText === false;
-  const shouldEnhanceText = input.includeText === true || 
-                            (input.includeText === undefined && 
-                             (selectedModel === 'ideogram-ai/ideogram-v3-turbo' || selectedModel === 'black-forest-labs/flux-1.1-pro'));
-  
+  const shouldEnhanceText = input.includeText === true ||
+    (input.includeText === undefined &&
+      (selectedModel === 'ideogram-ai/ideogram-v3-turbo' || selectedModel === 'black-forest-labs/flux-1.1-pro'));
+
   // Update prompts based on text handling preferences
   if (shouldExcludeText) {
     // Explicitly exclude all text when requested
@@ -287,7 +288,7 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
   try {
     // Model-specific parameter configuration
     let inputParams: any;
-    
+
     if (selectedModel === 'ideogram-ai/ideogram-v3-turbo') {
       // Ideogram v3 Turbo - Best for text rendering and human faces
       // Pricing: Typically $0.004-0.01 per image (check current Replicate pricing)
@@ -304,14 +305,20 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
       // Pricing: $0.04 per image
       inputParams = {
         prompt,
-        num_outputs: 1,
-        guidance_scale: 3.5,
-        num_inference_steps: 28,
         aspect_ratio: '1:1',
+        output_format: 'webp',
+        output_quality: 90,
+        safety_tolerance: 2, // Allow some flexibility
       };
-      if (negativePrompt && negativePrompt.trim().length > 0) {
-        inputParams.negative_prompt = negativePrompt;
-      }
+      // Flux 1.1 Pro doesn't strictly use negative_prompt in the same way, but we can try passing it
+      // or just rely on its superior understanding
+    } else if (selectedModel === 'recraft-ai/recraft-v3') {
+      // Recraft V3 - Excellent for design and text
+      inputParams = {
+        prompt,
+        style: 'digital_illustration', // or 'realistic_image'
+        size: '1024x1024',
+      };
     } else {
       // FLUX Schnell (default) - Best value for visuals without text
       // Pricing: $3 per 1,000 images ($0.003/image)
@@ -321,14 +328,16 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
         guidance_scale: 3.5,
         num_inference_steps: 4, // flux-schnell requires <= 4
         aspect_ratio: '1:1',
+        output_format: 'webp',
+        output_quality: 80,
       };
       if (negativePrompt && negativePrompt.trim().length > 0) {
         inputParams.negative_prompt = negativePrompt;
       }
     }
-    
+
     console.log(`🎨 Generating image with ${selectedModel}${shouldExcludeText ? ' (text excluded)' : shouldEnhanceText ? ' (text rendering enhanced)' : ' (text allowed, gibberish excluded)'}`);
-    
+
     const output = await replicate.run(
       selectedModel,
       {
@@ -337,9 +346,9 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
     );
 
     // Debug logging to understand what Replicate returns
-    console.log(`📦 Replicate response type: ${typeof output}, isArray: ${Array.isArray(output)}, value:`, 
+    console.log(`📦 Replicate response type: ${typeof output}, isArray: ${Array.isArray(output)}, value:`,
       output ? (typeof output === 'object' ? JSON.stringify(output).substring(0, 500) : String(output)) : 'null/undefined');
-    
+
     // Handle null/undefined output
     if (!output) {
       console.error(`❌ Replicate returned null or undefined. This indicates a generation failure.`);
@@ -356,39 +365,26 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
     if (output && Array.isArray(output) && output.length > 0) {
       // Handle different output types: FileOutput, ReadableStream, or URLs
       const firstOutput = output[0];
-      console.log(`📦 First output item type: ${typeof firstOutput}, value:`, 
+      console.log(`📦 First output item type: ${typeof firstOutput}, value:`,
         typeof firstOutput === 'object' ? JSON.stringify(firstOutput).substring(0, 200) : String(firstOutput));
-      
+
       let imageUrlRaw: any;
-      
+
       if (typeof firstOutput === 'string') {
         // Direct URL string
         imageUrlRaw = firstOutput;
       } else if (firstOutput && typeof firstOutput === 'object') {
         // Handle FileOutput object with url() method
         if (typeof firstOutput.url === 'function') {
+          // It's a FileOutput object with a url() method
+          // We must call the method to get the URL string
           try {
-            const urlResult = firstOutput.url();
-            // Ensure the result is actually a string URL, not another function or object
-            if (typeof urlResult === 'string' && urlResult.trim() !== '') {
-              imageUrlRaw = urlResult;
-            } else if (urlResult && typeof urlResult === 'object' && 'href' in urlResult) {
-              // If url() returns a URL object, get the href
-              imageUrlRaw = (urlResult as any).href || String(urlResult);
-            } else {
-              // Fallback: try to extract from the object directly
-              imageUrlRaw = (firstOutput as any).href || 
-                          (firstOutput as any).source ||
-                          String(firstOutput);
-            }
+            imageUrlRaw = firstOutput.url();
           } catch (error) {
-            console.warn('Error calling url() method, trying fallback:', error);
-            // Fallback if url() throws an error
-            imageUrlRaw = (firstOutput as any).href || 
-                        (firstOutput as any).source ||
-                        String(firstOutput);
+            console.warn('Error calling url() method:', error);
+            imageUrlRaw = String(firstOutput);
           }
-        } 
+        }
         // Handle ReadableStream - wait for it to resolve
         else if (firstOutput instanceof ReadableStream || firstOutput.constructor?.name === 'ReadableStream') {
           // ReadableStream needs to be consumed - but Replicate usually resolves this automatically
@@ -403,16 +399,16 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
             imageUrlRaw = urlProp;
           } else {
             // Try other properties
-            imageUrlRaw = (firstOutput as any).href || 
-                        (firstOutput as any).source || 
-                        (firstOutput as any).data ||
-                        String(firstOutput);
+            imageUrlRaw = (firstOutput as any).href ||
+              (firstOutput as any).source ||
+              (firstOutput as any).data ||
+              String(firstOutput);
           }
         }
       } else {
         imageUrlRaw = String(firstOutput);
       }
-      
+
       // Always convert to string - ensure imageUrl is a string before any operations
       // Also check that it's not a function stringified
       let imageUrlStr: string;
@@ -420,29 +416,29 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
         imageUrlStr = imageUrlRaw;
       } else if (imageUrlRaw && typeof imageUrlRaw === 'object') {
         // If it's still an object, try to extract URL from it
-        imageUrlStr = (imageUrlRaw as any).href || 
-                     (imageUrlRaw as any).url || 
-                     String(imageUrlRaw);
+        imageUrlStr = (imageUrlRaw as any).href ||
+          (imageUrlRaw as any).url ||
+          String(imageUrlRaw);
       } else {
         imageUrlStr = String(imageUrlRaw);
       }
-      
+
       // Final validation: reject if it looks like a function string
       if (imageUrlStr && (imageUrlStr.includes('function') || imageUrlStr.includes('url() {'))) {
         console.error('❌ Extracted URL looks like a function:', imageUrlStr.substring(0, 100));
         throw new Error(`Failed to extract valid URL from Replicate response. Got function instead of URL string.`);
       }
-      
+
       if (!imageUrlStr || imageUrlStr === '[object Object]' || imageUrlStr.trim() === '') {
         console.error(`❌ Failed to extract image URL. First output:`, firstOutput);
         throw new Error(`Could not extract image URL from Replicate response. Output type: ${typeof firstOutput}, Output structure: ${JSON.stringify(firstOutput).substring(0, 200)}`);
       }
-      
+
       // Use the validated string version
       const imageUrl = imageUrlStr;
-      
+
       console.log(`✅ Extracted image URL: ${imageUrl.substring(0, 100)}...`);
-      
+
       // Return the Replicate URL and model - storage will be handled by the caller
       return {
         imageUrl,
@@ -464,16 +460,27 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
       } catch (e) {
         console.log(`📦 Trying to extract from object output (could not stringify)`);
       }
-      const imageUrlRaw = (output as any).url || 
-                      (output as any).href || 
-                      (output as any).output?.[0] ||
-                      (output as any).data ||
-                      (Array.isArray((output as any).output) && (output as any).output[0]) ||
-                      String(output);
-      
+      let imageUrlRaw: any;
+
+      // Check if it's a FileOutput object with url() method
+      if (typeof (output as any).url === 'function') {
+        try {
+          imageUrlRaw = (output as any).url();
+        } catch (e) {
+          imageUrlRaw = (output as any).href || String(output);
+        }
+      } else {
+        imageUrlRaw = (output as any).url ||
+          (output as any).href ||
+          (output as any).output?.[0] ||
+          (output as any).data ||
+          (Array.isArray((output as any).output) && (output as any).output[0]) ||
+          String(output);
+      }
+
       // Ensure it's a string before checking
       const imageUrlStr = typeof imageUrlRaw === 'string' ? imageUrlRaw : String(imageUrlRaw);
-      
+
       if (imageUrlStr && imageUrlStr !== '[object Object]' && imageUrlStr.trim() !== '') {
         console.log(`✅ Extracted image URL from object: ${imageUrlStr.substring(0, 100)}...`);
         return {
@@ -482,7 +489,7 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
         };
       }
     }
-    
+
     // If we get here, output format is unexpected
     console.error(`❌ Unexpected Replicate response format. Output:`, output);
     const errorDetails = {
@@ -494,12 +501,12 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
     throw new Error(`No image returned from Replicate. Response: ${JSON.stringify(errorDetails)}`);
   } catch (error: any) {
     console.error(`Replicate API error (attempt ${retryCount + 1}/${maxRetries + 1}):`, error?.message || error);
-    
+
     // Handle payment required error with helpful message
-    if (error?.response?.status === 402 || 
-        error?.message?.toLowerCase().includes('payment') ||
-        error?.message?.toLowerCase().includes('credit') ||
-        error?.status_code === 402) {
+    if (error?.response?.status === 402 ||
+      error?.message?.toLowerCase().includes('payment') ||
+      error?.message?.toLowerCase().includes('credit') ||
+      error?.status_code === 402) {
       const helpfulError = new Error(
         `Replicate API: Payment required (402).\n\n` +
         `The free tier has usage limits that have been exceeded.\n\n` +
@@ -514,7 +521,7 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
       (helpfulError as any).isPaymentRequired = true;
       throw helpfulError;
     }
-    
+
     // Determine if we should retry
     const shouldRetry = retryCount < maxRetries && (
       // Retry on network errors
@@ -539,9 +546,9 @@ Composition: Balanced, eye-catching, optimized for social media feed (1:1 ratio)
       // Exponential backoff: wait 2^retryCount seconds (2s, 4s, 8s)
       const waitTime = Math.min(1000 * Math.pow(2, retryCount), 10000); // Max 10 seconds
       console.log(`⏳ Retrying image generation in ${waitTime / 1000}s... (attempt ${retryCount + 2}/${maxRetries + 1})`);
-      
+
       await new Promise(resolve => setTimeout(resolve, waitTime));
-      
+
       // Retry with incremented counter
       return generateImage(input, retryCount + 1, maxRetries);
     }

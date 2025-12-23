@@ -108,9 +108,37 @@ export async function publishContent(post: ContentPipeline) {
           break;
 
         case 'tiktok':
+          // TikTok requires video, not image
+          // Generate video from image if video_url doesn't exist
+          let videoUrl = post.video_url;
+          
+          if (!videoUrl && post.image_url) {
+            try {
+              console.log(`🎬 Generating video from image for TikTok post ${post.id}...`);
+              const { generateVideoFromImage } = await import('../../lib/ai/video-generation');
+              const videoResult = await generateVideoFromImage(post.image_url);
+              videoUrl = videoResult.videoUrl;
+              
+              // Save video_url to database for future use
+              await supabase
+                .from('content_pipeline')
+                .update({ video_url: videoUrl })
+                .eq('id', post.id);
+              
+              console.log(`✅ Video generated and saved: ${videoUrl.substring(0, 80)}...`);
+            } catch (videoError: any) {
+              console.error(`❌ Failed to generate video for TikTok:`, videoError?.message);
+              throw new Error(`TikTok video generation failed: ${videoError?.message || 'Unknown error'}`);
+            }
+          }
+          
+          if (!videoUrl) {
+            throw new Error('TikTok post requires video URL (image-to-video conversion failed or no image available)');
+          }
+          
           postId = await postToTikTok(
             accessToken,
-            post.image_url, // Note: TikTok requires video, not image
+            videoUrl,
             post.caption_tt || post.hook
           );
           break;

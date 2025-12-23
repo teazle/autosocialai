@@ -48,11 +48,52 @@ export async function postToTikTok(
     const publishId = initResponse.data.data.publish_id;
     const uploadUrl = initResponse.data.data.upload_url;
 
-    // Step 2: Upload video content
-    // Note: This is simplified - you may need to handle multipart upload
-    // For now, we'll assume the video is already accessible via URL
-    await axios.put(uploadUrl, {
-      video_url: videoUrl,
+    // Step 2: Download video from URL and upload to TikTok
+    // TikTok requires the actual video file, not just a URL
+    const videoResponse = await axios.get(videoUrl, {
+      responseType: 'arraybuffer',
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+    });
+
+    const videoBuffer = Buffer.from(videoResponse.data);
+    const videoSize = videoBuffer.length;
+
+    // Update source_info with actual video size
+    await axios.post(
+      `${TIKTOK_API_BASE}/post/publish/content/init/`,
+      {
+        post_info: {
+          title: caption,
+          privacy_level: privacyLevel,
+          disable_duet: false,
+          disable_comment: false,
+          disable_stitch: false,
+          video_cover_timestamp_ms: 1000,
+        },
+        source_info: {
+          source: 'FILE_UPLOAD',
+          video_size: videoSize,
+          chunk_size: videoSize, // Upload in one chunk for simplicity
+          total_chunk_count: 1,
+        },
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    // Upload video file
+    await axios.put(uploadUrl, videoBuffer, {
+      headers: {
+        'Content-Type': 'video/mp4', // Adjust based on video format
+        'Content-Length': videoSize.toString(),
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
     });
 
     // Step 3: Publish

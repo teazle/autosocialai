@@ -13,14 +13,14 @@ export async function generateImageWithStorage(
   maxRetries: number = 3
 ): Promise<string> {
   // Step 1: Generate image using Replicate (get temporary URL)
-  const replicateUrl = await generateReplicateImage(input, retryCount, maxRetries);
+  const replicateResult = await generateReplicateImage(input, retryCount, maxRetries);
   
   // Step 2: Upload to Supabase Storage and get permanent URL
-  const supabaseUrl = await uploadImageToStorage(replicateUrl, postId);
+  const supabaseUrl = await uploadImageToStorage(replicateResult.imageUrl, postId);
   
   if (!supabaseUrl) {
     console.warn('⚠️  Failed to upload to Supabase Storage, falling back to Replicate URL');
-    return replicateUrl; // Fallback to Replicate URL if storage fails
+    return replicateResult.imageUrl; // Fallback to Replicate URL if storage fails
   }
   
   return supabaseUrl;

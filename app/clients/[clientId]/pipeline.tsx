@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Composer } from '@/components/composer';
 import { ContentPipeline } from '@/lib/types/database';
-import { Edit, CheckCircle, XCircle, RefreshCw, Trash2, Plus, Send, Sparkles, Image as ImageIcon, FileText, MessageSquare } from 'lucide-react';
+import { Edit, CheckCircle, XCircle, RefreshCw, Trash2, Plus, Send, Sparkles, Image as ImageIcon, FileText, MessageSquare, Music } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils/date';
 import { useToast } from '@/components/ui/toast';
 import { ImageViewer } from '@/components/image-viewer';
@@ -58,29 +58,29 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
         const data = await response.json();
         const fetchedPosts = data.content || [];
         console.log(`📥 Fetched ${fetchedPosts.length} posts`);
-        
+
         // Filter out posts with invalid image URLs (function strings or non-string values)
         const validPosts = fetchedPosts.map((p: any) => {
           const imageUrl = p.image_url;
-          
+
           // Log the actual value for debugging
           if (imageUrl && typeof imageUrl !== 'string') {
             console.warn(`⚠️  Post ${p.id} has non-string image_url:`, typeof imageUrl, imageUrl);
             return { ...p, image_url: null };
           }
-          
+
           // Check if image_url is invalid (contains function code or is not a valid URL)
           if (imageUrl && typeof imageUrl === 'string') {
             // Check for function code patterns
-            if (imageUrl.includes('url() {') || 
-                imageUrl.includes('function') ||
-                imageUrl.includes('return new URL') ||
-                imageUrl.includes('=>') ||
-                imageUrl.trim().length === 0) {
+            if (imageUrl.includes('url() {') ||
+              imageUrl.includes('function') ||
+              imageUrl.includes('return new URL') ||
+              imageUrl.includes('=>') ||
+              imageUrl.trim().length === 0) {
               console.warn(`⚠️  Post ${p.id} has invalid image URL (function code):`, imageUrl.substring(0, 100));
               return { ...p, image_url: null };
             }
-            
+
             // Check if it's a valid URL format
             try {
               new URL(imageUrl);
@@ -89,17 +89,17 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
               return { ...p, image_url: null };
             }
           }
-          
+
           return p;
         });
-        
+
         // Debug: Log posts with images
         const postsWithImages = validPosts.filter((p: any) => p.image_url);
         console.log(`📸 Posts with images: ${postsWithImages.length}/${validPosts.length}`);
         postsWithImages.forEach((p: any) => {
           console.log(`  - Post ${p.id}: ${p.image_url?.substring(0, 80)}...`);
         });
-        
+
         // Log posts without images for debugging
         const postsWithoutImages = validPosts.filter((p: any) => !p.image_url);
         if (postsWithoutImages.length > 0) {
@@ -108,7 +108,7 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
             console.log(`  - Post ${p.id} (${p.status}): No image_url`);
           });
         }
-        
+
         setPosts(validPosts);
       }
     } catch (error) {
@@ -122,7 +122,7 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
     setGenerating(true);
     try {
       console.log('🤖 Auto-generating post for client:', clientId);
-      
+
       const response = await fetch('/api/generate-post-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -136,26 +136,26 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
       }
 
       console.log('✅ Post generated:', result);
-      
+
       // Show success message with details
-      let message = result.warning 
+      let message = result.warning
         ? `⚠️ ${result.warning}\n\nContent generated without image.\n\n`
         : `Post generated successfully!\n\n`;
-      
+
       message += `Hook: "${result.post?.hook || 'N/A'}"\n` +
         `Validation Score: ${result.post?.validation_score || 'N/A'}/100\n` +
         `Status: ${result.post?.validation_status || 'N/A'}`;
-      
+
       if (result.billing_note) {
         message += `\n\n💡 ${result.billing_note}`;
       }
-      
+
       if (result.warning) {
         toast({ title: 'Post generated (no image)', description: result.warning });
       } else {
         toast({ title: 'Post generated', description: `Hook: ${result.post?.hook || 'N/A'}`, variant: 'success' });
       }
-      
+
       // Refresh the posts list
       await fetchPosts();
     } catch (error: any) {
@@ -195,7 +195,7 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Content Pipeline</h2>
         <div className="flex gap-2">
-          <Button 
+          <Button
             variant="default"
             onClick={autoGeneratePost}
             disabled={generating}
@@ -241,7 +241,7 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
             <Card key={post.id}>
               <CardContent className="pt-6">
                 <div className="flex items-start gap-4">
-                  {post.image_url ? (
+                  {post.image_url && typeof post.image_url === 'string' ? (
                     <div className="relative">
                       <img
                         src={post.image_url}
@@ -268,10 +268,10 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                         }}
                         onClick={() => {
                           // Find all posts with images and get current index
-                          const postsWithImages = posts.filter(p => p.image_url);
+                          const postsWithImages = posts.filter(p => p.image_url && typeof p.image_url === 'string');
                           const imageIndex = postsWithImages.findIndex(p => p.id === post.id);
                           setCurrentImageIndex(imageIndex >= 0 ? imageIndex : 0);
-                          setViewingImage(post.image_url || null);
+                          setViewingImage(post.image_url && typeof post.image_url === 'string' ? post.image_url : null);
                         }}
                       />
                       {post.image_model && (
@@ -287,6 +287,34 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                       <ImageIcon className="w-8 h-8 text-gray-400" />
                     </div>
                   )}
+
+                  {/* Video Player Display */}
+                  {(post.validation_result as any)?.videoUrl && (
+                    <div className="relative w-24 h-24 bg-black rounded overflow-hidden group">
+                      <video
+                        src={(post.validation_result as any).videoUrl}
+                        className="w-full h-full object-cover"
+                        controls={false}
+                        muted
+                        loop
+                        onMouseOver={(e) => e.currentTarget.play()}
+                        onMouseOut={(e) => e.currentTarget.pause()}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:hidden">
+                        <div className="bg-black/50 rounded-full p-1">
+                          <Music className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                      <a
+                        href={(post.validation_result as any).videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        Open
+                      </a>
+                    </div>
+                  )}
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -299,9 +327,9 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                       </div>
                       <div className="flex gap-2">
                         {post.status === 'generated' && (
-                          <Button 
-                            variant="default" 
-                            size="sm" 
+                          <Button
+                            variant="default"
+                            size="sm"
                             onClick={() => {
                               setPostToPublish(post.id);
                               setPublishDialogOpen(true);
@@ -311,9 +339,9 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                             Publish
                           </Button>
                         )}
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setSelectedPost(post);
                             setShowComposer(true);
@@ -322,11 +350,11 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        
+
                         {/* Regenerate Content Only */}
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={async () => {
                             try {
                               const response = await fetch(`/api/pipeline/${post.id}/regenerate-content`, {
@@ -348,12 +376,12 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                         >
                           <FileText className="w-4 h-4" />
                         </Button>
-                        
+
                         {/* Regenerate Image Only */}
                         {post.image_url ? (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={async () => {
                               try {
                                 const response = await fetch(`/api/pipeline/${post.id}/regenerate-image`, {
@@ -380,9 +408,9 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                             <ImageIcon className="w-4 h-4" />
                           </Button>
                         ) : (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={async () => {
                               try {
                                 const response = await fetch(`/api/pipeline/${post.id}/regenerate-image`, {
@@ -409,11 +437,43 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                             <ImageIcon className="w-4 h-4" />
                           </Button>
                         )}
-                        
+
+                        {/* Generate Video for TikTok */}
+                        {post.image_url && typeof post.image_url === 'string' && !post.video_url && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`/api/pipeline/${post.id}/generate-video`, {
+                                  method: 'POST',
+                                });
+                                const result = await response.json();
+                                if (response.ok) {
+                                  fetchPosts(); // Refresh the list
+                                  toast({ title: 'Video generated', description: 'Video has been generated from image for TikTok.', variant: 'success' });
+                                } else {
+                                  if (result.paymentRequired) {
+                                    toast({ title: 'Payment required', description: result.message || 'Replicate credits needed for video generation.', variant: 'warning' });
+                                  } else {
+                                    toast({ title: 'Video generation failed', description: result.error || 'Could not generate video.', variant: 'destructive' });
+                                  }
+                                }
+                              } catch (error: any) {
+                                console.error('Error generating video:', error);
+                                toast({ title: 'Video generation failed', description: error.message || 'Please try again later.', variant: 'destructive' });
+                              }
+                            }}
+                            title="Generate video from image (for TikTok)"
+                          >
+                            <Music className="w-4 h-4" />
+                          </Button>
+                        )}
+
                         {/* Regenerate Both */}
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={async () => {
                             try {
                               const response = await fetch(`/api/pipeline/${post.id}/regenerate`, {
@@ -434,9 +494,9 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                         >
                           <RefreshCw className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setPostToDelete(post.id);
                             setDeleteDialogOpen(true);
@@ -446,11 +506,11 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                         </Button>
                       </div>
                     </div>
-                    
+
                     {post.hook && (
                       <p className="text-sm font-medium break-words">{post.hook}</p>
                     )}
-                    
+
                     <div className="text-sm text-black space-y-1 break-words">
                       {post.caption_ig && (
                         <div>
@@ -482,13 +542,12 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
                       </div>
                     )}
                     {post.validation_status && (
-                      <div className={`text-xs p-2 rounded mt-2 ${
-                        post.validation_status === 'approved' 
-                          ? 'bg-green-50 text-green-800' 
+                      <div className={`text-xs p-2 rounded mt-2 ${post.validation_status === 'approved'
+                          ? 'bg-green-50 text-green-800'
                           : post.validation_status === 'rejected'
-                          ? 'bg-red-50 text-red-800'
-                          : 'bg-yellow-50 text-yellow-800'
-                      }`}>
+                            ? 'bg-red-50 text-red-800'
+                            : 'bg-yellow-50 text-yellow-800'
+                        }`}>
                         <span className="font-medium">Validation: </span>
                         {post.validation_status === 'approved' && '✓ Approved by AI'}
                         {post.validation_status === 'rejected' && '✗ Rejected by AI'}
@@ -531,12 +590,13 @@ export default function PipelineTab({ clientId }: PipelineTabProps) {
         }}
         imageUrl={viewingImage}
         alt="Post image"
-        images={posts.filter(p => p.image_url).map(p => p.image_url!)}
+        images={posts.filter(p => p.image_url && typeof p.image_url === 'string').map(p => p.image_url as string)}
         currentIndex={currentImageIndex}
         onIndexChange={(index) => {
-          const postsWithImages = posts.filter(p => p.image_url);
+          const postsWithImages = posts.filter(p => p.image_url && typeof p.image_url === 'string');
           setCurrentImageIndex(index);
-          setViewingImage(postsWithImages[index]?.image_url || null);
+          const selectedPost = postsWithImages[index];
+          setViewingImage(selectedPost?.image_url && typeof selectedPost.image_url === 'string' ? selectedPost.image_url : null);
         }}
       />
 

@@ -5,9 +5,7 @@ import Replicate from 'replicate';
 // Load environment variables if not already loaded
 dotenv.config();
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
-const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 
 export interface ValidationResult {
   approved: boolean;
@@ -87,7 +85,7 @@ export async function validateContent(
         const hasRepeatingChars = /(.)\1{4,}/.test(visionAnalysis.textContent); // 5+ repeated chars
         const hasManySpecialChars = specialCharRatio > 0.3; // Lower threshold
         const hasFewWords = (visionAnalysis.textContent.match(/\b\w+\b/g) || []).length < 3 && visionAnalysis.textContent.length > 10;
-        
+
         if (hasRepeatingChars || (hasManySpecialChars && hasFewWords)) {
           issues.push('Image appears to contain gibberish or corrupted text');
         }
@@ -119,11 +117,11 @@ export async function validateContent(
     if (textValidation.details.contentQuality === 'low') score -= 10;
 
     // Check for gibberish-related issues in the issues array
-    const hasGibberishIssue = issues.some(issue => 
-      typeof issue === 'string' && 
-      (issue.toLowerCase().includes('gibberish') || 
-       issue.toLowerCase().includes('random characters') ||
-       issue.toLowerCase().includes('corrupted text'))
+    const hasGibberishIssue = issues.some(issue =>
+      typeof issue === 'string' &&
+      (issue.toLowerCase().includes('gibberish') ||
+        issue.toLowerCase().includes('random characters') ||
+        issue.toLowerCase().includes('corrupted text'))
     );
 
     // NEVER approve if there's gibberish detected
@@ -148,12 +146,12 @@ export async function validateContent(
     };
   } catch (error: any) {
     console.error('Content validation error:', error?.message || error);
-    
+
     // If vision API fails, do a basic text-only validation
     // Don't fail completely - approve if text content is good
     try {
       const textValidation = await validateTextContent(content);
-      
+
       // If text validation passes with high quality, approve it
       // OCR failure shouldn't block good content
       // Approve if score >= 90 OR if text validation itself approved
@@ -173,11 +171,11 @@ export async function validateContent(
       });
       // If score is 100 or 95+, approve regardless of suggestions (they're just recommendations)
       const shouldApprove = textValidation.approved || textScore >= 95 || (textScore >= 90 && !hasCriticalTextIssues);
-      
+
       if (shouldApprove) {
         return {
           approved: true,
-          issues: textScore >= 95 
+          issues: textScore >= 95
             ? ['Image validation skipped (OCR unavailable), but excellent text content approved']
             : ['Image validation skipped (OCR unavailable), but text content approved'],
           details: {
@@ -189,7 +187,7 @@ export async function validateContent(
           },
         };
       }
-      
+
       // If text is medium quality, mark for review but with better score
       return {
         approved: false,
@@ -237,6 +235,8 @@ async function analyzeImage(imageUrl: string): Promise<{
 }> {
   try {
     // Use Replicate's OCR model for text extraction
+    const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+
     if (REPLICATE_API_TOKEN) {
       const replicate = new Replicate({
         auth: REPLICATE_API_TOKEN,
@@ -250,79 +250,60 @@ async function analyzeImage(imageUrl: string): Promise<{
         let extractedText = '';
         let ocrOutput: any;
         let analysisMethod = 'none';
-        
-        // Method 1: Try Tesseract-based OCR (reliable, widely available)
+
+        // Method 1: Try LLaVA-13b (Vision Language Model) - reliable for text extraction
         try {
           ocrOutput = await replicate.run(
-            'daanelson/image-ocr:latest',
+            'yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb',
             {
               input: {
                 image: imageUrl,
+                prompt: 'Extract ALL text from this image exactly as it appears. If there is no text, respond with only "NO_TEXT". If text appears to be gibberish or random characters, extract it anyway.',
+                temperature: 0.2,
+                max_tokens: 1024
               },
             }
           );
-          analysisMethod = 'tesseract-ocr';
+          analysisMethod = 'llava-13b';
         } catch (error1) {
-          // Method 2: Try vision-language model (can analyze and extract text)
+          // Method 2: Try Salesforce BLIP (Image Captioning/VQA) as fallback
           try {
             ocrOutput = await replicate.run(
-              'yorickvp/llava-13b:latest',
+              'salesforce/blip:2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746',
               {
                 input: {
                   image: imageUrl,
-                  prompt: 'Extract ALL text from this image exactly as it appears. If there is no text, respond with only "NO_TEXT". If text appears to be gibberish or random characters, extract it anyway - we will analyze it separately.',
+                  task: 'image_captioning', // or 'visual_question_answering'
+                  question: 'what text is written in this image?', // only used if task is vqa
                 },
               }
             );
-            analysisMethod = 'llava-vision';
+            analysisMethod = 'salesforce-blip';
           } catch (error2) {
-            // Method 3: Try alternative OCR model
-            try {
-              ocrOutput = await replicate.run(
-                'microsoft/trocr-base-printed:latest',
-                {
-                  input: {
-                    image: imageUrl,
-                  },
-                }
-              );
-              analysisMethod = 'trocr-ocr';
-            } catch (error3) {
-              // Method 4: Try another vision model
-              try {
-                ocrOutput = await replicate.run(
-                  'lucataco/llava-v1.6-vicuna:latest',
-                  {
-                    input: {
-                      image: imageUrl,
-                      prompt: 'What text is visible in this image? Extract all text exactly as it appears. If no text, say "NO_TEXT".',
-                    },
-                  }
-                );
-                analysisMethod = 'llava-vicuna';
-              } catch (error4) {
-                throw error4; // All OCR methods failed
-              }
-            }
+            console.error('❌ All OCR/Vision methods failed:', {
+              error1: error1 instanceof Error ? error1.message : String(error1),
+              error2: error2 instanceof Error ? error2.message : String(error2)
+            });
+            throw error2; // Propagate the last error
           }
         }
-        
+
         // Handle different output formats from different models
         if (typeof ocrOutput === 'string') {
           extractedText = ocrOutput;
         } else if (Array.isArray(ocrOutput)) {
-          extractedText = ocrOutput.map((item: any) => 
+          extractedText = ocrOutput.map((item: any) =>
             typeof item === 'string' ? item : (item?.text || item?.content || item?.output || '')
           ).join(' ').trim();
         } else if (ocrOutput && typeof ocrOutput === 'object') {
-          extractedText = ocrOutput.text || ocrOutput.result || ocrOutput.content || 
-                         ocrOutput.output || ocrOutput.description ||
-                         JSON.stringify(ocrOutput);
+          extractedText = ocrOutput.text || ocrOutput.result || ocrOutput.content ||
+            ocrOutput.output || ocrOutput.description ||
+            JSON.stringify(ocrOutput);
         }
 
         // Clean up extracted text
         extractedText = extractedText.trim();
-        
+
         // Check for "NO_TEXT" response from vision models
         if (extractedText.toLowerCase().includes('no_text') || extractedText.length === 0) {
           return {
@@ -381,6 +362,8 @@ async function analyzeExtractedText(text: string): Promise<{
   language: 'english' | 'other' | 'gibberish' | 'decorative';
   issues: string[];
 }> {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
   if (!GROQ_API_KEY) {
     // Basic fallback check
     const englishCharRatio = (text.match(/[a-zA-Z\s]/g) || []).length / text.length;
@@ -483,6 +466,8 @@ async function analyzeImageWithVisionAPI(imageUrl: string): Promise<{
   professionalStandard: boolean;
   issues: string[];
 }> {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
   if (!GROQ_API_KEY) {
     return {
       hasText: false,
@@ -499,7 +484,7 @@ async function analyzeImageWithVisionAPI(imageUrl: string): Promise<{
   // Note: This is a workaround since Groq doesn't have direct vision API
   // We'll use text-based analysis as fallback
   console.warn('⚠️ OCR models unavailable - using vision fallback. Manual review recommended.');
-  
+
   // Return a conservative result that flags for manual review
   // This ensures images with potential text issues get checked
   return {
@@ -519,6 +504,8 @@ async function analyzeImageWithVisionAPI(imageUrl: string): Promise<{
 async function validateTextContent(
   content: ContentToValidate
 ): Promise<ValidationResult> {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
   if (!GROQ_API_KEY) {
     throw new Error('GROQ_API_KEY is not configured');
   }
@@ -573,10 +560,10 @@ Respond with JSON only:
     );
 
     const analysis = JSON.parse(response.data.choices[0].message.content);
-    
+
     const score = analysis.score || 70;
     const issues = analysis.issues || [];
-    
+
     // Approve if score is high (>= 95 = always approve, >= 85 = approve if no critical issues)
     // Minor suggestions don't block approval - score of 95+ means content is excellent
     const hasCriticalIssues = issues.some((issue: string | any) => {
@@ -589,7 +576,7 @@ Respond with JSON only:
         issueStr.toLowerCase().includes('bad')
       );
     });
-    
+
     // Score 100 or 95+ = excellent content, approve regardless of minor suggestions
     // Score 85-94 = good content, approve if no critical issues
     const approved = score >= 95 || (score >= 85 && !hasCriticalIssues);
@@ -620,4 +607,3 @@ Respond with JSON only:
     };
   }
 }
-

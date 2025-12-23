@@ -25,10 +25,69 @@ export default function SettingsTab({ client }: SettingsTabProps) {
   const [onboardingLink, setOnboardingLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [imageModel, setImageModel] = useState('black-forest-labs/flux-1.1-pro');
+  const [savingModel, setSavingModel] = useState(false);
+
+  const IMAGE_MODELS = [
+    { value: 'black-forest-labs/flux-1.1-pro', label: 'Flux 1.1 Pro (Best for Text)' },
+    { value: 'black-forest-labs/flux-schnell', label: 'Flux Schnell (Fast & Cheap)' },
+    { value: 'ideogram-ai/ideogram-v3-turbo', label: 'Ideogram V3 Turbo (Good for Text)' },
+    { value: 'recraft-ai/recraft-v3', label: 'Recraft V3 (Design & Text)' },
+  ];
 
   useEffect(() => {
     fetchOnboardingLink();
+    fetchImageModel();
   }, [client.id]);
+
+  const fetchImageModel = async () => {
+    try {
+      const supabase = createBrowserClient();
+      const { data, error } = await supabase
+        .from('brand_assets')
+        .select('replicate_model')
+        .eq('client_id', client.id)
+        .maybeSingle();
+
+      if (data?.replicate_model) {
+        setImageModel(data.replicate_model);
+      }
+    } catch (error) {
+      console.error('Error fetching image model:', error);
+    }
+  };
+
+  const handleSaveModel = async () => {
+    setSavingModel(true);
+    try {
+      const supabase = createBrowserClient();
+      const { error } = await supabase
+        .from('brand_assets')
+        .upsert({
+          client_id: client.id,
+          replicate_model: imageModel,
+        }, {
+          onConflict: 'client_id'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Model saved',
+        description: `Image generation will now use ${IMAGE_MODELS.find(m => m.value === imageModel)?.label || imageModel}.`,
+        variant: 'success'
+      });
+    } catch (error) {
+      console.error('Error saving model:', error);
+      toast({
+        title: 'Failed to save',
+        description: 'Could not save model preference.',
+        variant: 'destructive'
+      });
+    } finally {
+      setSavingModel(false);
+    }
+  };
 
   const fetchOnboardingLink = async () => {
     try {
@@ -52,29 +111,29 @@ export default function SettingsTab({ client }: SettingsTabProps) {
       const response = await fetch(`/api/admin/clients/${client.id}/onboarding`, {
         method: 'POST',
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setOnboardingLink(data.onboardingLink);
-        toast({ 
-          title: 'Onboarding link generated', 
-          description: 'The onboarding link has been created successfully.', 
-          variant: 'success' 
+        toast({
+          title: 'Onboarding link generated',
+          description: 'The onboarding link has been created successfully.',
+          variant: 'success'
         });
       } else {
         const error = await response.json();
-        toast({ 
-          title: 'Failed to generate link', 
-          description: error.error || 'Could not generate onboarding link.', 
-          variant: 'destructive' 
+        toast({
+          title: 'Failed to generate link',
+          description: error.error || 'Could not generate onboarding link.',
+          variant: 'destructive'
         });
       }
     } catch (error) {
       console.error('Error generating onboarding link:', error);
-      toast({ 
-        title: 'Failed to generate link', 
-        description: 'An error occurred while generating the onboarding link.', 
-        variant: 'destructive' 
+      toast({
+        title: 'Failed to generate link',
+        description: 'An error occurred while generating the onboarding link.',
+        variant: 'destructive'
       });
     } finally {
       setGenerating(false);
@@ -92,7 +151,7 @@ export default function SettingsTab({ client }: SettingsTabProps) {
   const handleSave = async () => {
     try {
       const supabase = createBrowserClient();
-      
+
       // Update client info
       const { error } = await supabase
         .from('clients')
@@ -125,7 +184,7 @@ export default function SettingsTab({ client }: SettingsTabProps) {
         <CardHeader>
           <CardTitle>Client Onboarding Link</CardTitle>
           <CardDescription className="text-black">
-            {onboardingLink 
+            {onboardingLink
               ? 'Send this link to the client to complete their setup'
               : 'No onboarding link available. Create a new client to get an invite link.'
             }
@@ -234,13 +293,31 @@ export default function SettingsTab({ client }: SettingsTabProps) {
       {/* Model Preferences */}
       <Card>
         <CardHeader>
-          <CardTitle>Model Preferences</CardTitle>
-          <CardDescription className="text-black">Configure AI model settings (coming soon)</CardDescription>
+          <CardTitle>Image Generation Model</CardTitle>
+          <CardDescription className="text-black">Choose the AI model used to generate images for this client</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="text-sm text-black">
-            Configure which AI models to use for content generation
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="imageModel">AI Model</Label>
+            <select
+              id="imageModel"
+              value={imageModel}
+              onChange={(e) => setImageModel(e.target.value)}
+              className="w-full mt-1 p-2 border rounded-md bg-white"
+            >
+              {IMAGE_MODELS.map((model) => (
+                <option key={model.value} value={model.value}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-black mt-2">
+              <strong>Flux 1.1 Pro</strong>: Best for accurate text rendering. <strong>Ideogram</strong>: Good for stylized visuals. <strong>Recraft</strong>: Excellent for design-focused content.
+            </p>
           </div>
+          <Button onClick={handleSaveModel} disabled={savingModel}>
+            {savingModel ? 'Saving...' : 'Save Model'}
+          </Button>
         </CardContent>
       </Card>
 
@@ -259,7 +336,7 @@ export default function SettingsTab({ client }: SettingsTabProps) {
         </CardHeader>
         <CardContent>
           <div>
-            <Button 
+            <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
             >
@@ -267,7 +344,7 @@ export default function SettingsTab({ client }: SettingsTabProps) {
               Delete Client
             </Button>
           </div>
-          
+
           <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
             <DialogContent>
               <DialogHeader>

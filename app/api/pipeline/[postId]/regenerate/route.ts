@@ -217,12 +217,38 @@ export async function POST(
       ? 'approved' 
       : (validationResult.details.overallScore < 50 ? 'rejected' : 'manual_review');
 
-    // Upload image to Supabase Storage
-    let finalImageUrl = imageResult.imageUrl;
+    // Validate image URL before saving
+    let imageUrlToSave: string | null = null;
     if (imageResult.imageUrl) {
+      if (typeof imageResult.imageUrl !== 'string') {
+        console.error('❌ imageUrl is not a string before saving:', typeof imageResult.imageUrl);
+        imageUrlToSave = null;
+      } else {
+        // Double-check it's a valid URL
+        try {
+          new URL(imageResult.imageUrl);
+          // Check for function code
+          if (!imageResult.imageUrl.includes('function') && 
+              !imageResult.imageUrl.includes('url() {') && 
+              !imageResult.imageUrl.includes('=>')) {
+            imageUrlToSave = imageResult.imageUrl;
+          } else {
+            console.error('❌ imageUrl contains function code before saving');
+            imageUrlToSave = null;
+          }
+        } catch (e) {
+          console.error('❌ imageUrl is not a valid URL before saving');
+          imageUrlToSave = null;
+        }
+      }
+    }
+
+    // Upload image to Supabase Storage
+    let finalImageUrl = imageUrlToSave;
+    if (imageUrlToSave) {
       try {
         console.log(`💾 Uploading image to Supabase Storage...`);
-        const supabaseImageUrl = await uploadImageToStorage(imageResult.imageUrl, postId);
+        const supabaseImageUrl = await uploadImageToStorage(imageUrlToSave, postId);
         if (supabaseImageUrl) {
           finalImageUrl = supabaseImageUrl;
           console.log(`✅ Image stored in Supabase: ${supabaseImageUrl}`);
@@ -256,7 +282,7 @@ export async function POST(
 
     return NextResponse.json({ 
       post: updatedPost,
-      storage: finalImageUrl.includes('supabase') ? 'supabase' : 'replicate',
+      storage: finalImageUrl && finalImageUrl.includes('supabase') ? 'supabase' : 'replicate',
     });
   } catch (error) {
     console.error('Error regenerating post:', error);

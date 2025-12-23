@@ -109,12 +109,45 @@ export async function POST(
       );
     }
 
+    // Validate image URL before saving
+    let imageUrlToSave: string | null = null;
+    if (imageResult.imageUrl) {
+      if (typeof imageResult.imageUrl !== 'string') {
+        console.error('❌ imageUrl is not a string before saving:', typeof imageResult.imageUrl);
+        imageUrlToSave = null;
+      } else {
+        // Double-check it's a valid URL
+        try {
+          new URL(imageResult.imageUrl);
+          // Check for function code
+          if (!imageResult.imageUrl.includes('function') && 
+              !imageResult.imageUrl.includes('url() {') && 
+              !imageResult.imageUrl.includes('=>')) {
+            imageUrlToSave = imageResult.imageUrl;
+          } else {
+            console.error('❌ imageUrl contains function code before saving');
+            imageUrlToSave = null;
+          }
+        } catch (e) {
+          console.error('❌ imageUrl is not a valid URL before saving');
+          imageUrlToSave = null;
+        }
+      }
+    }
+
+    if (!imageUrlToSave) {
+      return NextResponse.json(
+        { error: 'Generated image URL is invalid' },
+        { status: 500 }
+      );
+    }
+
     // Upload to Supabase Storage
     console.log(`💾 Uploading image to Supabase Storage...`);
-    let finalImageUrl = imageResult.imageUrl; // Fallback to Replicate URL
+    let finalImageUrl = imageUrlToSave; // Fallback to Replicate URL
     
     try {
-      const supabaseImageUrl = await uploadImageToStorage(imageResult.imageUrl, postId);
+      const supabaseImageUrl = await uploadImageToStorage(imageUrlToSave, postId);
       if (supabaseImageUrl) {
         finalImageUrl = supabaseImageUrl;
         console.log(`✅ Image stored in Supabase: ${supabaseImageUrl}`);
